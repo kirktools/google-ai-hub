@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BellRing } from 'lucide-react';
+import { ArrowUpCircle, BellRing, Download, ExternalLink, X } from 'lucide-react';
 import { BENEFIT_CATALOG, PLAN_DEFINITIONS } from '../shared/plans';
+import {
+  checkForUpdate,
+  dismissUpdateNotice,
+  type UpdateCheckResult,
+} from '../shared/updateCheck';
 import {
   createInitialState,
   loadState,
@@ -40,6 +45,7 @@ export function App() {
   const [calibratingId, setCalibratingId] = useState<BenefitId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
   const hasAutoSyncedRef = useRef(false);
 
   const showToast = (msg: string) => {
@@ -81,6 +87,13 @@ export function App() {
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  // 启动时低频静默检查 GitHub Releases 新版本（12 小时缓存）
+  useEffect(() => {
+    void checkForUpdate(false).then((res) => {
+      if (res) setUpdateInfo(res);
+    });
   }, []);
 
   // 同步浅色/深色主题到 html class
@@ -252,11 +265,64 @@ export function App() {
         {view === 'settings' ? (
           <SettingsView
             state={state}
+            updateInfo={updateInfo}
+            onUpdateInfoChange={setUpdateInfo}
             onUpdateSettings={handleUpdateSettings}
             onStateReplaced={setState}
           />
         ) : (
           <div className="space-y-2.5 p-3.5">
+            {/* 新版本更新提醒横幅 */}
+            {updateInfo?.hasUpdate && !updateInfo.dismissed && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 py-2.5 text-xs text-emerald-950 dark:border-emerald-900/80 dark:bg-emerald-950/50 dark:text-emerald-100">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <ArrowUpCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <div>
+                      <p className="font-semibold">
+                        发现新版本 v{updateInfo.latestVersion}
+                        <span className="ml-1.5 font-normal text-[11px] opacity-80">
+                          当前 v{updateInfo.currentVersion}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-[11px] opacity-85">
+                        下载 ZIP 解压覆盖原扩展目录，在扩展页点刷新即可（数据保留）。
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    title="暂不提醒此版本"
+                    onClick={() => {
+                      void dismissUpdateNotice(updateInfo.latestVersion);
+                      setUpdateInfo({ ...updateInfo, dismissed: true });
+                    }}
+                    className="rounded p-0.5 text-emerald-700/70 transition hover:bg-emerald-200/60 hover:text-emerald-900 dark:text-emerald-300/70 dark:hover:bg-emerald-900/60"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center gap-2 pl-6">
+                  <button
+                    type="button"
+                    onClick={() => void chrome.tabs.create({ url: updateInfo.downloadUrl })}
+                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-emerald-700"
+                  >
+                    <Download className="h-3 w-3" />
+                    下载新版 ZIP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void chrome.tabs.create({ url: updateInfo.releaseUrl })}
+                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/80 bg-white/70 px-2 py-1 text-[11px] font-medium text-emerald-800 transition hover:bg-white dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+                  >
+                    更新说明
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 首次未同步引导卡片 */}
             {planSource === 'pending' && !state.syncProgress.running && (
               <div className="flex items-start justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50/90 px-3 py-2.5 text-xs text-indigo-900 dark:border-indigo-900/80 dark:bg-indigo-950/50 dark:text-indigo-200">

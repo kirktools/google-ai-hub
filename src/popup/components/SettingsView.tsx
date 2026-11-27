@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
 import {
+  ArrowUpCircle,
   Bug,
   Download,
+  ExternalLink,
+  RefreshCw,
   RotateCcw,
   ShieldCheck,
   Trash2,
@@ -13,6 +16,12 @@ import {
   exportBackupJson,
   importBackupJson,
 } from '../../shared/storage';
+import {
+  checkForUpdate,
+  getCurrentExtensionVersion,
+  RELEASES_PAGE_URL,
+  type UpdateCheckResult,
+} from '../../shared/updateCheck';
 import type {
   HubStorageState,
   PlanId,
@@ -23,18 +32,41 @@ import type {
 
 interface SettingsViewProps {
   state: HubStorageState;
+  updateInfo: UpdateCheckResult | null;
+  onUpdateInfoChange: (next: UpdateCheckResult | null) => void;
   onUpdateSettings: (patch: Partial<UserSettings>) => Promise<void>;
   onStateReplaced: (next: HubStorageState) => void;
 }
 
 export function SettingsView({
   state,
+  updateInfo,
+  onUpdateInfoChange,
   onUpdateSettings,
   onStateReplaced,
 }: SettingsViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [notice, setNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const currentVersion = getCurrentExtensionVersion();
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const res = await checkForUpdate(true);
+      onUpdateInfoChange(res);
+      if (res?.hasUpdate) {
+        showNotice('ok', `发现新版本 v${res.latestVersion}，可点击下方按钮下载覆盖更新`);
+      } else {
+        showNotice('ok', `当前已是最新版本 v${currentVersion}`);
+      }
+    } catch {
+      showNotice('err', '检查更新失败：无法连接 GitHub Releases，请检查网络后重试');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   const showNotice = (type: 'ok' | 'err', text: string) => {
     setNotice({ type, text });
@@ -352,11 +384,69 @@ export function SettingsView({
         </button>
       </section>
 
+      {/* 版本与检查更新 */}
+      <section className="space-y-2.5 rounded-xl border border-slate-200/90 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              版本与更新
+            </h2>
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              当前版本 v{currentVersion}
+              {updateInfo?.hasUpdate ? (
+                <span className="ml-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                  · 有新版 v{updateInfo.latestVersion}
+                </span>
+              ) : updateInfo ? (
+                <span className="ml-1.5 text-slate-400 dark:text-slate-500">· 已是最新</span>
+              ) : null}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={checkingUpdate}
+            onClick={() => void handleCheckUpdate()}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50/60 disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            <RefreshCw className={`h-3 w-3 ${checkingUpdate ? 'animate-spin' : ''}`} />
+            {checkingUpdate ? '检查中…' : '检查更新'}
+          </button>
+        </div>
+
+        {updateInfo?.hasUpdate && (
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50/80 px-2.5 py-2 text-[11px] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <span className="inline-flex items-center gap-1 font-medium">
+              <ArrowUpCircle className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              v{updateInfo.latestVersion} 已发布，解压覆盖原目录后刷新扩展即可
+            </span>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void chrome.tabs.create({ url: updateInfo.downloadUrl })}
+                className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-emerald-700"
+              >
+                下载
+              </button>
+              <button
+                type="button"
+                title="查看更新说明"
+                onClick={() =>
+                  void chrome.tabs.create({ url: updateInfo.releaseUrl || RELEASES_PAGE_URL })
+                }
+                className="rounded-md p-1 text-emerald-700 hover:bg-emerald-200/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* 隐私声明 */}
       <div className="flex items-start gap-2 rounded-xl bg-emerald-50/70 p-3 text-[11px] leading-relaxed text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          Google AI Hub 完全在您的浏览器本地运行，不读取密码或 Cookie，不发起任何第三方网络请求，所有数据仅保存在
+          Google AI Hub 完全在您的浏览器本地运行，不读取密码或 Cookie，绝不上传任何账号或用量数据（仅检查更新时只读访问 GitHub Releases 版本号），所有数据仅保存在
           <code className="mx-0.5 rounded bg-emerald-100 px-1 py-0.5 dark:bg-emerald-900/60">
             chrome.storage.local
           </code>
