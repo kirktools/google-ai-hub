@@ -55,7 +55,7 @@
 如果你正在使用 **Antigravity / Claude Code / Cursor / Codex** 等 AI 助手，直接把下面这句话发给它即可自动下载预构建包并解压：
 
 ```text
-请帮我下载 https://github.com/kirktools/google-ai-hub/releases/latest/download/google-ai-hub-chrome.zip 并解压到本地一个固定目录，然后告诉我如何在 Chrome 中加载这个扩展。
+请帮我下载 https://github.com/kirktools/google-ai-hub/releases/latest/download/google-ai-hub-chrome.zip 并解压到本地固定目录，再帮我打开 Chrome 的 chrome://extensions/ 并完成加载（若受浏览器安全限制无法自动点击，请打开解压目录并指引我最后一步）。
 ```
 
 ### 方式 B：直接下载预构建压缩包（无需 Node 环境）
