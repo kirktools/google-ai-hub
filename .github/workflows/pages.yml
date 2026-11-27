@@ -1,12 +1,19 @@
 name: Deploy website
 
 on:
-  push:
-    branches: [master, main]
-    paths:
-      - 'site/**'
-      - '.github/workflows/pages.yml'
+  workflow_call:
+    inputs:
+      ref:
+        description: '部署官网使用的 git ref（默认使用当前触发 ref）'
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      ref:
+        description: '手动部署官网的分支（默认 master）'
+        required: false
+        default: master
+        type: string
 
 permissions:
   contents: read
@@ -23,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

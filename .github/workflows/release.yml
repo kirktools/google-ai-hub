@@ -34,3 +34,13 @@ jobs:
             release/SHA256SUMS.txt \
             --title "Google AI Hub ${TAG}" \
             --generate-notes
+
+  deploy-site:
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ github.ref }}

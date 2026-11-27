@@ -89,7 +89,7 @@
                 <span>Google Flow · Google Colab</span>
                 <span class="demo-tag">已同步</span>
               </div>
-              <p>Flow 共享 780 点 · Colab 剩余 86.5 / 100 计算单元</p>
+              <p>Flow 可用 1,050 点（含今日 50 点）· Colab 可用 200 计算单元</p>
             </div>
           </div>
         </div>
@@ -106,8 +106,8 @@
             <p>优先从 Google One 页面自动识别 Free / AI Plus / AI Pro / AI Ultra (5x / 20x) 及续费重置日，自动匹配对应权益卡片；未识别到时也支持设置页手动兜底。</p>
           </article>
           <article class="card">
-            <h3>一键静默同步 + 顺路被动更新</h3>
-            <p>后台串行打开非激活标签页提取可见信息后立即自动关闭，不打断当前页面；内置 3 分钟冷却防抖，避免高频刷新；平时自己浏览这些站点也会顺路更新缓存。</p>
+            <h3>一键静默同步 + 低频定时刷新</h3>
+            <p>优先复用已打开标签，其余仅复用单个后台非激活标签页提取可见信息后立即关闭；支持每 1~12 小时低频自动更新与 3 分钟防抖冷却，打开看板即刻秒看。</p>
           </article>
           <article class="card">
             <h3>8 大平台全景覆盖 + 手动校准</h3>
@@ -141,12 +141,17 @@
             </tr>
             <tr>
               <td><code>tabs</code></td>
-              <td>一键同步时创建后台非激活标签页并在提取完成后立即关闭</td>
+              <td>一键同步时复用单个后台非激活标签页并在提取完成后立即关闭</td>
               <td>不读取其他无关标签页或浏览历史</td>
             </tr>
             <tr>
-              <td>6 个官方 Google 域名</td>
-              <td>仅限 One、AI Studio、Flow、Colab、Gemini、NotebookLM 可见文本提取</td>
+              <td><code>alarms</code></td>
+              <td>支持低频定时自动刷新缓存（最低 1 小时，可随时关闭）</td>
+              <td>禁止高频轮询，不耗电不触发风控</td>
+            </tr>
+            <tr>
+              <td>官方 Google 站点域名</td>
+              <td>仅限 Google One、Cloud 结算、Builders Hub、AI Studio、Flow/Labs、Colab、Gemini、NotebookLM 可见文本提取</td>
               <td>不申请 <code>&lt;all_urls&gt;</code>、<code>cookies</code> 或密码权限</td>
             </tr>
           </tbody>

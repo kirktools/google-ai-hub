@@ -18,9 +18,8 @@
 
 订阅了 **Google AI Plus / Google AI Pro / Google AI Ultra (5x / 20x)** 后，你是否经常遇到这些烦恼？
 
-- 权益分散在 **Google One、AI Studio、Flow、Colab、Gemini、NotebookLM、Antigravity** 等六七个不同域名下，每次查余量都要逐个点开网页；
-- 每月附赠的 **AI Credits、Cloud/AI Studio 赠金、Colab 计算单元** 忘记用或忘记领，月底直接清零浪费；
-- 浏览器里登录了多个 Google 账号（`/u/0/`、`/u/1/`），经常切错号、看花眼；
+- 权益分散在 **Google One、AI Studio / Cloud 赠金、Flow、Colab、Gemini、NotebookLM、Antigravity** 等多个不同域名下，每次查余量都要逐个点开网页；
+- 每月附赠的 **AI Credits、Cloud 赠金、Colab 计算单元** 忘记用或忘记领，月底直接清零浪费；
 - 不敢把 Google 账号、Cookie 或 API Key 交给任何第三方云端统计网站。
 
 **Google AI Hub** 就是为此而生的轻量级开源 Chrome 插件：直接复用你浏览器里已有的 Google 登录态，点一下「一键同步」，十几秒内把分散在各平台的余量汇总到一个清爽的中文看板里，全程不离本机。
@@ -30,18 +29,18 @@
 ## 二、核心特性
 
 - **自动识别订阅套餐**：优先从 `one.google.com` 自动识别当前套餐（Free / AI Plus / AI Pro / AI Ultra 5x / AI Ultra 20x）与每月重置日，自动匹配对应权益清单；未识别到时也支持在设置中手动兜底。
-- **一键静默同步 + 顺路被动更新**：
-  - 点击顶部「一键同步」，后台 Service Worker 串行创建**非激活后台标签页（`active: false`）**，读取已渲染的可见余额后**立即自动关闭标签页**，全程不打断当前浏览；
-  - 内置 **3 分钟冷却防抖**，禁止高频后台轮询或调用未公开私有 API，温和低频不触发风控；
+- **一键静默同步 + 低频定时刷新 + 顺路被动更新**：
+  - 点击顶部「一键同步」（或首次打开自动触发），后台优先复用已打开的同站点标签页，其余仅复用**单个非激活后台标签页（`active: false`）**顺序提取可见数据并立即关闭，避免标签栏反复闪烁；
+  - 支持基于 `chrome.alarms` 的**低频定时自动同步**（默认每 1 小时，可调 1~12 小时或关闭），打开看板即刻秒看最新缓存；内置 **3 分钟冷却防抖**，不调未公开私有 API；
   - 平时自己正常访问上述 Google 站点时，也会顺路静默更新本地缓存。
-- **8 大权益卡片全景看板（支持折叠、排序与手动校准）**：
-  1. **Google One 云盘 & AI Credits**：云盘已用/总量、AI Credits 剩余点数与重置日
-  2. **Google AI Studio / Cloud 赠金**：每月赠金领取状态与余额
-  3. **Google Flow**：Veo 视频 / 图片 / 音乐创作点数余量
-  4. **Google Colab**：每月 GPU / TPU 计算单元（Compute Units）余量
-  5. **Gemini 网页版**：旗舰模型与 Deep Research 权益入口
-  6. **NotebookLM**：进阶笔记本与音频播客概览入口
-  7. **Google Antigravity**：桌面端编码额度卡片（标注 5 小时滚动刷新机制，支持快捷记录）
+- **8 大权益卡片全景看板（各平台独立组件、支持折叠/排序/手动校准）**：
+  1. **Google One 云盘 & AI Credits**：真实已用/总云盘空间占比进度条
+  2. **Google AI Studio / Cloud 赠金**：自动读取 Cloud 结算赠金余额（如 `$300` 试用 + 每月 `$10` Developer 赠金）及 Google Builders Hub 一键领取指引
+  3. **Google Flow**：总可用点数、月度 + 今日赠送双进度条与额外 AI 点数明细
+  4. **Google Colab**：自动读取剩余 GPU / TPU 计算单元（Compute Units）与消耗占比
+  5. **Gemini 网页版**：5 小时滚动窗口 + 每周限额双进度条与精确重置时间
+  6. **NotebookLM（Gemini Notebook）**：当前 + 每周 AI 用量双进度条、重置时间与个人笔记本数
+  7. **Google Antigravity**：桌面端编码额度卡片（标注 5 小时滚动刷新机制，支持手动记录）
   8. **生态附加福利（折叠区）**：Workspace AI、YouTube Premium、家庭组共享等
 - **月度防浪费提醒**：距离账单/额度重置日 ≤ 5 天时，在面板顶部柔和提醒检查当月可消耗额度。
 - **浅色 / 深色主题 & 本地备份**：支持跟随系统/手动切换主题、JSON 导出/导入备份、一键清空缓存。
@@ -86,6 +85,9 @@ pnpm package
 
 # 一键发版（默认自动 patch +1，如 1.0.0 -> 1.0.1），自动同步 manifest 版本、构建、提交、打标签并推送
 pnpm release
+
+# 预演发版（不改文件、不提交、不推送）
+pnpm release --dry-run
 
 # 指定 minor 或 major 递增（或使用当前版本号发首版）
 pnpm release minor
@@ -151,12 +153,12 @@ google-ai-hub/
 │   │   ├── types.ts              # 全局数据结构与消息协议
 │   │   ├── plans.ts              # 各订阅套餐默认权益配置（统一在此维护）
 │   │   ├── storage.ts            # chrome.storage.local 封装与 JSON 导入导出
-│   │   └── utils.ts              # 多账号 URL 拼接、重置倒计时与冷却工具
+│   │   └── utils.ts              # URL 路由识别、重置倒计时与冷却工具
 │   ├── background/
-│   │   └── index.ts              # Service Worker：串行后台同步与 3 分钟冷却防抖
+│   │   └── index.ts              # Service Worker：单标签复用同步、定时闹钟与 3 分钟冷却防抖
 │   ├── content/
 │   │   ├── index.ts              # Content Script 入口：主动提取与顺路被动同步
-│   │   └── parsers/              # 按站点拆分的独立 DOM 解析器（中英文容错）
+│   │   └── parsers/              # 按站点拆分的独立 DOM 解析器（支持 Shadow DOM 与中英文容错）
 │   │       ├── types.ts
 │   │       ├── googleOne.ts
 │   │       ├── aiStudio.ts
@@ -167,6 +169,8 @@ google-ai-hub/
 │   └── popup/                    # 400px 宽 React + Tailwind CSS 现代卡片看板
 │       ├── App.tsx
 │       └── components/
+│           └── cards/            # 按平台拆分的独立权益卡片组件
+├── scripts/                      # 本地打包与一键发版脚本（package / release）
 └── site/                         # 静态官网介绍页（GitHub Pages 部署）
 ```
 
