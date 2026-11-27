@@ -1,4 +1,4 @@
-import { Film } from 'lucide-react';
+import { ExternalLink, Film } from 'lucide-react';
 import { CardShell } from './CardShell';
 import { UsageBar } from './UsageBar';
 import type { PlatformCardProps } from './types';
@@ -19,7 +19,7 @@ export function FlowCard(props: PlatformCardProps) {
           {primaryText}
         </p>
         {secondaryText && (
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
             {secondaryText}
           </p>
         )}
@@ -27,16 +27,40 @@ export function FlowCard(props: PlatformCardProps) {
 
       {typeof record.metrics.percent === 'number' && (
         <UsageBar
-          label="本月创作点数消耗"
+          label="月度 Flow 点数消耗"
           percent={record.metrics.percent}
           monthlyReset
           daysUntilReset={daysUntilReset}
         />
       )}
 
+      {typeof record.metrics.secondaryPercent === 'number' && (
+        <UsageBar
+          label="今日赠送点数消耗（每日重置）"
+          percent={record.metrics.secondaryPercent}
+        />
+      )}
+
+      {record.metrics.resetInfo && (
+        <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+          {record.metrics.resetInfo}
+        </p>
+      )}
+
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => void chrome.tabs.create({ url: 'https://flow.google.com/' })}
+          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        >
+          打开 Flow 创作
+          <ExternalLink className="h-3 w-3" />
+        </button>
+      </div>
+
       {record.status === 'fallback' && record.source !== 'manual' && (
         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-          {record.message || 'Flow 点数与 Google One AI Credits 共享，可点击直达 Flow 查看余量。'}
+          {record.message || '点击「直达」可查看 Google Flow 活动记录与详细点数。'}
         </p>
       )}
     </CardShell>

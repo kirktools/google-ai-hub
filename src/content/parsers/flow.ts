@@ -8,24 +8,109 @@ import {
   type SiteParser,
 } from './types';
 
+function parseGoogleOneFlowActivity(text: string) {
+  // 1. 解析方案月度基准 & 每日额外赠送（如 "已包含 1,000 个 Google Flow 点数... 每天还会额外获得 50 个 Google Flow 点数"）
+  const monthlyQuotaMatch =
+    text.match(/(?:已包含|includes?)\s*([\d,]+)\s*个?\s*(?:Google\s+Flow\s*)?(?:点数|credits?)/i);
+  const dailyQuotaMatch =
+    text.match(/(?:每天(?:还会)?额外获得|daily\s+bonus[^\d]{0,12}|per\s+day[^\d]{0,12})\s*([\d,]+)\s*个?\s*(?:Google\s+Flow\s*)?(?:点数|credits?)/i);
+
+  const monthlyQuota = parseNumberToken(monthlyQuotaMatch?.[1]);
+  const dailyQuota = parseNumberToken(dailyQuotaMatch?.[1]);
+
+  // 2. 解析「Google Flow 抵用金」卡片大数字（如 "Google Flow 抵用金\n1,050"）
+  const flowTotalMatch =
+    text.match(/Google\s+Flow\s*(?:抵用金|点数|credits?)\s*[\n:：]+\s*([\d,]+)/i) ||
+    text.match(/Flow\s+credits?\s*[\n:：]+\s*([\d,]+)/i);
+  const flowTotal = parseNumberToken(flowTotalMatch?.[1]);
+
+  // 3. 解析「今天还剩 50 个 Flow 点数」
+  const dailyRemainMatch =
+    text.match(/(?:今天还剩|今日剩余|today[^\d]{0,16})\s*([\d,]+)\s*个?\s*(?:Google\s+)?Flow\s*(?:点数|credits?)/i);
+  const dailyRemaining = parseNumberToken(dailyRemainMatch?.[1]);
+
+  // 4. 解析右侧「AI 点数」大数字（如 "AI 点数\n0"）
+  const extraAiMatch = text.match(/(?:^|\n)\s*(?:AI\s*点数|AI\s*credits?)\s*[\n:：]+\s*([\d,]+)/i);
+  const extraAiCredits = parseNumberToken(extraAiMatch?.[1]);
+
+  if (flowTotal === undefined && monthlyQuota === undefined) {
+    return null;
+  }
+
+  const totalRem = flowTotal ?? 0;
+  const effDailyQuota = dailyQuota ?? (dailyRemaining !== undefined && dailyRemaining > 0 ? dailyRemaining : undefined);
+  const effDailyRem = dailyRemaining ?? 0;
+
+  // 计算月度点数剩余与已用百分比
+  let monthlyPercent: number | undefined;
+  let monthlyRemainText = '';
+  if (monthlyQuota !== undefined && monthlyQuota > 0) {
+    const monthlyRem = Math.min(monthlyQuota, Math.max(0, totalRem - effDailyRem));
+    monthlyPercent = Math.min(
+      100,
+      Math.max(0, Math.round(((monthlyQuota - monthlyRem) / monthlyQuota) * 100))
+    );
+    monthlyRemainText = `月度 ${monthlyRem.toLocaleString()}/${monthlyQuota.toLocaleString()}`;
+  }
+
+  // 计算今日赠送点数已用百分比
+  let dailyPercent: number | undefined;
+  let dailyRemainText = '';
+  if (effDailyQuota !== undefined && effDailyQuota > 0 && dailyRemaining !== undefined) {
+    dailyPercent = Math.min(
+      100,
+      Math.max(0, Math.round(((effDailyQuota - dailyRemaining) / effDailyQuota) * 100))
+    );
+    dailyRemainText = `今日赠送 ${dailyRemaining}/${effDailyQuota}（优先消耗·每日重置）`;
+  }
+
+  const detailParts = [
+    monthlyRemainText,
+    dailyRemainText,
+    extraAiCredits !== undefined ? `额外 AI 点数：${extraAiCredits.toLocaleString()}` : '',
+  ].filter(Boolean);
+
+  return {
+    benefitId: 'flow' as const,
+    status: 'synced' as const,
+    metrics: {
+      primaryText: `Flow 总可用点数：${totalRem.toLocaleString()} 点`,
+      secondaryText:
+        detailParts.length > 0
+          ? detailParts.join(' · ')
+          : '来自 Google Flow 活动记录页',
+      percent: monthlyPercent,
+      secondaryPercent: dailyPercent,
+      remainingValue: totalRem,
+      totalValue: (monthlyQuota ?? 0) + (effDailyQuota ?? 0) || undefined,
+      unit: '点',
+    },
+  };
+}
+
 export const flowParser: SiteParser = {
   id: 'flow',
 
   isReady(doc) {
     const text = getVisibleText(doc);
     if (text.length < 40) return false;
-    return /(?:Flow|Veo|credits?|点数|积分|Create|创作|Labs|Sign in|登录)/i.test(text);
+    return /(?:Flow|Veo|抵用金|AI\s*点数|credits?|点数|积分|Create|创作|Labs|Sign in|登录)/i.test(
+      text
+    );
   },
 
-  /** 主动后台同步时，尝试点击右上角头像/账号按钮展开 AI Credits 点数浮层 */
+  /** 主动后台同步时，若落在 flow.google.com 则点击头像；若落在 one.google.com/ai/activity 则直接等待数据加载 */
   async prepareForActiveSync(doc) {
-    // 如果页面里已经直接出现 credits 数字，无需点击
-    const initial = getVisibleText(doc);
-    if (/\d[\d,]*\s*(?:AI\s*credits?|credits?|点数|积分)/i.test(initial)) {
+    if (window.location.hostname.includes('one.google.com')) {
+      await sleepMs(1000);
       return;
     }
 
-    // 尝试点击头像按钮（带 Google Account / 账号 aria-label 或包含 googleusercontent 头像图片的按钮）
+    const initial = getVisibleText(doc);
+    if (/\d[\d,]*\s*个?\s*(?:Google\s+Flow\s*)?(?:AI\s*credits?|credits?|点数|积分)/i.test(initial)) {
+      return;
+    }
+
     const clickedByLabel = clickElementByTextOrLabel(
       doc,
       /Google\s*(?:Account|账号|帐号)|Profile|个人资料|账户|账号|Credits|点数/i
@@ -35,7 +120,7 @@ export const flowParser: SiteParser = {
       const avatarImg = doc.querySelector<HTMLImageElement>(
         'img[src*="googleusercontent.com"]'
       );
-      const clickableParent = avatarImg?.closest<HTMLElement>('button, [role="button"], a');
+      const clickableParent = avatarImg?.closest<HTMLElement>('button, [role="button"]');
       if (clickableParent) {
         clickableParent.click();
       }
@@ -50,7 +135,13 @@ export const flowParser: SiteParser = {
       return buildUnauthenticatedResult('flow');
     }
 
-    // 匹配 "850 / 1,000 credits" 或跨行 "AI 点数\n850 / 1,000"
+    // 1. 优先解析 Google One「Google Flow 活动记录」详细页（one.google.com/ai/activity）
+    if (url.toLowerCase().includes('one.google.com')) {
+      const activityResult = parseGoogleOneFlowActivity(text);
+      if (activityResult) return activityResult;
+    }
+
+    // 2. 兼容 flow.google.com 头像浮层解析
     const pairMatch =
       text.match(
         /(?:AI\s*credits?|credits?|AI\s*点数|点数|积分)[\s\S]{0,28}?([\d,]+)\s*(?:\/|of|共)\s*([\d,]+)/i
@@ -76,9 +167,13 @@ export const flowParser: SiteParser = {
       }
     }
 
-    // 匹配单个点数数值（支持数字与单位跨行，如 "1,000\nAI 点数" 或 "AI credits\n1,000" 或 "movie_filter\n1,000"）
+    const resetMatch = text.match(
+      /(?:重置时间|刷新时间|Resets?(?:\s+on)?)\s*[:：]?\s*([^\n]{3,24})/i
+    );
+    const resetInfo = resetMatch ? `重置时间：${resetMatch[1].trim()}` : undefined;
+
     const singleMatch =
-      text.match(/([\d,]+)\s*(?:AI\s*credits?|credits?|AI\s*点数|点\s*AI\s*点数|积分)/i) ||
+      text.match(/([\d,]+)\s*个?\s*(?:Google\s+Flow\s*)?(?:AI\s*credits?|credits?|AI\s*点数|点数|积分)/i) ||
       text.match(/(?:AI\s*credits?|AI\s*点数|剩余点数|可用点数|credits?)[\s:：]{0,16}([\d,]+)/i) ||
       text.match(/切换账号[\s\S]{0,80}?\b([\d,]{2,6})\b/);
 
@@ -89,10 +184,11 @@ export const flowParser: SiteParser = {
           benefitId: 'flow',
           status: 'synced',
           metrics: {
-            primaryText: `剩余 ${rem.toLocaleString()} 点`,
-            secondaryText: '来自 Google Flow 页面 / 头像浮层余额',
+            primaryText: `剩余 ${rem.toLocaleString()} 个 Google Flow 点数`,
+            secondaryText: '来自 Google Flow 头像浮层实时余额',
             remainingValue: rem,
             unit: '点',
+            resetInfo,
           },
         };
       }
@@ -102,7 +198,7 @@ export const flowParser: SiteParser = {
       benefitId: 'flow',
       status: 'fallback',
       metrics: {},
-      message: '未从 Flow 头像浮层读到点数（可点击直达 Flow 点开头像查看，打开时会自动顺路同步）',
+      message: '未检测到 Flow 点数明细，可点击直达查看',
     };
   },
 };

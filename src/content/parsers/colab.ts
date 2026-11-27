@@ -97,17 +97,17 @@ export const colabParser: SiteParser = {
       }
     }
 
-    // 2. 在 /signup 页若能识别出当前已订阅状态（如 "当前方案 / Current plan" 附近的 Colab Pro）
-    const activeTierMatch = cleanText.match(
-      /(?:当前方案|已订阅|Current\s+plan|Active)[\s\S]{0,40}?(Colab\s+Pro\+|Colab\s+Pro)/i
-    );
+    // 2. 识别当前已激活的 Colab 付费会员状态（例如笔记本底部栏的 "Colab 付费产品" / "Colab Pro"）
+    const activeTierMatch =
+      cleanText.match(/(?:当前方案|已订阅|Current\s+plan|Active)[\s\S]{0,40}?(Colab\s+Pro\+|Colab\s+Pro)/i) ||
+      cleanText.match(/(Colab\s*付费产品|Colab\s+Paid\s+Services)/i);
     if (activeTierMatch) {
       return {
         benefitId: 'colab',
         status: 'synced',
         metrics: {
-          primaryText: `已订阅 ${activeTierMatch[1]}`,
-          secondaryText: '打开任意 Colab 笔记本 → 右上角「查看资源」可自动同步精确计算单元',
+          primaryText: `Colab 付费会员已激活（含 Pro 计算单元）`,
+          secondaryText: '点右上角「直达」进入笔记本 → 「RAM/磁盘 → 查看资源」可自动同步精确计算单元数',
         },
       };
     }

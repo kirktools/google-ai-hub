@@ -37,7 +37,8 @@
     "https://labs.google/*",
     "https://colab.research.google.com/*",
     "https://gemini.google.com/*",
-    "https://notebooklm.google.com/*"
+    "https://notebooklm.google.com/*",
+    "https://notebook.google.com/*"
   ],
   "content_scripts": [
     {
@@ -50,7 +51,8 @@
         "https://labs.google/*",
         "https://colab.research.google.com/*",
         "https://gemini.google.com/*",
-        "https://notebooklm.google.com/*"
+        "https://notebooklm.google.com/*",
+        "https://notebook.google.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

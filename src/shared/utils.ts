@@ -93,8 +93,12 @@ export function formatCooldown(ms: number): string {
 /** 判断 URL 对应哪个可同步平台 */
 export function detectBenefitIdFromUrl(urlStr: string): BenefitId | null {
   try {
-    const host = new URL(urlStr).hostname.toLowerCase();
-    if (host === 'one.google.com') return 'google_one';
+    const parsedUrl = new URL(urlStr);
+    const host = parsedUrl.hostname.toLowerCase();
+    const pathname = parsedUrl.pathname.toLowerCase();
+    if (host === 'one.google.com') {
+      return pathname.includes('/ai/activity') ? 'flow' : 'google_one';
+    }
     if (
       host === 'aistudio.google.com' ||
       host === 'me.developers.google.com' ||
@@ -105,7 +109,7 @@ export function detectBenefitIdFromUrl(urlStr: string): BenefitId | null {
     if (host === 'flow.google.com' || host === 'labs.google') return 'flow';
     if (host === 'colab.research.google.com') return 'colab';
     if (host === 'gemini.google.com') return 'gemini';
-    if (host === 'notebooklm.google.com') return 'notebooklm';
+    if (host === 'notebooklm.google.com' || host === 'notebook.google.com') return 'notebooklm';
     return null;
   } catch {
     return null;

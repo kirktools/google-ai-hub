@@ -145,17 +145,28 @@ export async function applyParsedSiteResult(
   const now = Date.now();
   const prev = state.benefits[parsed.benefitId] ?? createEmptyBenefit(parsed.benefitId);
 
-  // 如果本次只是低置信度 fallback 且用户已有手动校准值，保留手动值不覆盖
+  // 如果本次只是低置信度 fallback，保留用户手动校准值，也保留上一次已成功同步的有效数值（防止偶发超时把好数据冲掉）
   const keepManual = parsed.status === 'fallback' && Boolean(prev.manualOverride);
+  const keepPreviousSynced =
+    parsed.status === 'fallback' &&
+    !keepManual &&
+    prev.status === 'synced' &&
+    Boolean(prev.metrics.primaryText);
 
   state.benefits[parsed.benefitId] = {
     ...prev,
     id: parsed.benefitId,
-    status: parsed.status,
-    source: keepManual ? 'manual' : parsed.status === 'synced' ? 'auto' : prev.source,
-    updatedAt: now,
-    metrics: keepManual ? prev.metrics : parsed.metrics,
-    message: parsed.message,
+    status: keepPreviousSynced ? prev.status : parsed.status,
+    source: keepManual
+      ? 'manual'
+      : keepPreviousSynced
+        ? prev.source
+        : parsed.status === 'synced'
+          ? 'auto'
+          : prev.source,
+    updatedAt: keepPreviousSynced ? prev.updatedAt : now,
+    metrics: keepManual || keepPreviousSynced ? prev.metrics : parsed.metrics,
+    message: keepPreviousSynced ? prev.message : parsed.message,
     debugInfo: parsed.debugInfo,
   };
 

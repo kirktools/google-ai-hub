@@ -97,7 +97,7 @@ pnpm build
 | :--- | :--- | :--- |
 | `storage` | 在本地 `chrome.storage.local` 保存权益缓存与主题/排序偏好 | 不使用云端同步，不上传数据 |
 | `tabs` | 一键同步时创建非激活后台标签页并在读取后立即关闭；点击卡片打开官网 | 不读取你其他无关标签页的内容或浏览历史 |
-| `host_permissions`（仅 9 个官方 Google 域名/路径） | 仅在 `one.google.com`、`aistudio.google.com`、`me.developers.google.com`、`console.cloud.google.com/billing*`、`flow.google.com`、`labs.google`、`colab.research.google.com`、`gemini.google.com`、`notebooklm.google.com` 上运行可见文本解析 | **不申请 `<all_urls>`**，不触碰 Gmail、Drive、银行或任何其他网站 |
+| `host_permissions`（仅 10 个官方 Google 域名/路径） | 仅在 `one.google.com`、`aistudio.google.com`、`me.developers.google.com`、`console.cloud.google.com/billing*`、`flow.google.com`、`labs.google`、`colab.research.google.com`、`gemini.google.com`、`notebooklm.google.com`、`notebook.google.com` 上运行可见文本解析 | **不申请 `<all_urls>`**，不触碰 Gmail、Drive、银行或任何其他网站 |
 
 ---
 

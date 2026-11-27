@@ -32,6 +32,10 @@ export function GeminiCard(props: PlatformCardProps) {
         />
       )}
 
+      {typeof record.metrics.secondaryPercent === 'number' && (
+        <UsageBar label="每周限额已用" percent={record.metrics.secondaryPercent} />
+      )}
+
       {record.metrics.resetInfo && (
         <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
           {record.metrics.resetInfo}

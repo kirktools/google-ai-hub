@@ -32,30 +32,50 @@ export const geminiParser: SiteParser = {
       /\bGemini\s+(?:AI\s+)?Ultra\b/i.test(text) || /(?:^|\n)\s*Ultra\s*(?:\n|$)/i.test(text);
     const hasPro =
       /\bGemini\s+(?:Advanced|Pro)\b/i.test(text) ||
-      /(?:^|\n)\s*(?:Pro|AI\s+Pro)\s*(?:\n|$)/i.test(text);
+      /(?:^|\n)\s*(?:Pro|AI\s+Pro|PRO)\s*(?:\n|$)/i.test(text);
     const hasPlus = /(?:^|\n)\s*(?:Plus|AI\s+Plus)\s*(?:\n|$)/i.test(text);
     const hasDeepResearch = /Deep\s+Research|深度研究/i.test(text);
 
-    // 1. 解析文本中的用量百分比（兼容「已使用 XX%」「已用 XX%」「剩余 XX%」「XX% used」「XX% remaining」）
+    // 1. 精准拆解「当前用量（5 小时窗口）」与「每周限额」
     let usagePercent: number | undefined;
-    let resetInfo: string | undefined;
+    let weeklyPercent: number | undefined;
+    let currentResetText: string | undefined;
+    let weeklyResetText: string | undefined;
 
-    const usedPctMatch =
-      text.match(/(?:已使用|已用|used)\s*(\d{1,3})\s*%/i) ||
-      text.match(/(\d{1,3})\s*%\s*(?:used|已使用|已用)/i);
-    const remainPctMatch =
-      text.match(/(?:剩余|remaining|left)\s*(\d{1,3})\s*%/i) ||
-      text.match(/(\d{1,3})\s*%\s*(?:remaining|left|剩余)/i);
-
-    if (usedPctMatch) {
-      const p = Number(usedPctMatch[1]);
-      if (p >= 0 && p <= 100) usagePercent = p;
-    } else if (remainPctMatch) {
-      const r = Number(remainPctMatch[1]);
-      if (r >= 0 && r <= 100) usagePercent = 100 - r;
+    const currentSection = text.match(/(?:当前用量|Current\s+usage)[\s\S]{0,120}/i)?.[0];
+    if (currentSection) {
+      const pct = currentSection.match(/(?:已使用|已用|used)\s*(\d{1,3})\s*%/i);
+      if (pct) usagePercent = Number(pct[1]);
+      const rst = currentSection.match(/(?:重置时间|刷新时间|Resets?)\s*[:：]\s*([^\n]{2,20})/i);
+      if (rst) currentResetText = `当前窗口重置：${rst[1].trim()}`;
     }
 
-    // 2. 如果文本里没直接写数字，读取页面上 progressbar 的 aria-valuenow
+    const weeklySection = text.match(/(?:每周限额|Weekly\s+limit)[\s\S]{0,120}/i)?.[0];
+    if (weeklySection) {
+      const pct = weeklySection.match(/(?:已使用|已用|used)\s*(\d{1,3})\s*%/i);
+      if (pct) weeklyPercent = Number(pct[1]);
+      const rst = weeklySection.match(/(?:重置时间|刷新时间|Resets?)\s*[:：]\s*([^\n]{2,20})/i);
+      if (rst) weeklyResetText = `每周限额重置：${rst[1].trim()}`;
+    }
+
+    // 2. 通用百分比兜底（防止英文或改版页面缺少分段标题）
+    if (usagePercent === undefined) {
+      const usedPctMatch =
+        text.match(/(?:已使用|已用|used)\s*(\d{1,3})\s*%/i) ||
+        text.match(/(\d{1,3})\s*%\s*(?:used|已使用|已用)/i);
+      const remainPctMatch =
+        text.match(/(?:剩余|remaining|left)\s*(\d{1,3})\s*%/i) ||
+        text.match(/(\d{1,3})\s*%\s*(?:remaining|left|剩余)/i);
+
+      if (usedPctMatch) {
+        const p = Number(usedPctMatch[1]);
+        if (p >= 0 && p <= 100) usagePercent = p;
+      } else if (remainPctMatch) {
+        const r = Number(remainPctMatch[1]);
+        if (r >= 0 && r <= 100) usagePercent = 100 - r;
+      }
+    }
+
     if (usagePercent === undefined) {
       const bars = deepQuerySelectorAll<HTMLElement>(doc, '[role="progressbar"], progress');
       for (const bar of bars) {
@@ -70,12 +90,8 @@ export const geminiParser: SiteParser = {
       }
     }
 
-    const refreshMatch = text.match(
-      /(?:刷新时间|重置时间|恢复时间|将于[^\n]{2,18}(?:重置|刷新)|refreshes?(?:\s+at|\s+in)?[^\n]{1,22}|resets?(?:\s+at|\s+in)?[^\n]{1,22})/i
-    );
-    if (refreshMatch) {
-      resetInfo = refreshMatch[0].trim();
-    }
+    const resetParts = [currentResetText, weeklyResetText].filter(Boolean);
+    const resetInfo = resetParts.length > 0 ? resetParts.join(' · ') : undefined;
 
     const accountLabel = extractGoogleAccountLabel(doc);
 
@@ -95,13 +111,11 @@ export const geminiParser: SiteParser = {
         metrics: {
           primaryText:
             usagePercent !== undefined
-              ? `${tierLabel} · 当前窗口已用 ${usagePercent}%`
+              ? `${tierLabel} · 当前已用 ${usagePercent}%${weeklyPercent !== undefined ? ` / 本周 ${weeklyPercent}%` : ''}`
               : tierLabel,
-          secondaryText:
-            usagePercent !== undefined
-              ? '来自 Gemini 用量限额页（5 小时滚动刷新）'
-              : '点击「直达」查看 Gemini 用量限额详情',
+          secondaryText: '来自 Gemini 官方用量限额页（含 5 小时滚动与每周限额）',
           percent: usagePercent,
+          secondaryPercent: weeklyPercent,
           resetInfo,
         },
         planHint: hasUltra

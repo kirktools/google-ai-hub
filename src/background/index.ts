@@ -89,10 +89,22 @@ async function requestExtractionFromTab(
     await sleep(900);
   }
 
+  let finalUrl = '';
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    finalUrl = tab.url || '';
+  } catch {
+    // ignore
+  }
+
   return {
     benefitId,
     status: 'fallback',
     metrics: {},
+    debugInfo: {
+      url: finalUrl,
+      textSnippet: 'Content script 未响应（可能页面跳转到了未放行域名或加载超时）',
+    },
     message: '未能从后台标签页读取到内容，可点击直达官网查看',
   };
 }

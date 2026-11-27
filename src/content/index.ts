@@ -82,7 +82,11 @@ chrome.runtime.onMessage.addListener(
       return undefined;
     }
 
-    waitAndParse(parser, 8500, true)
+    const activeWaitMs = window.location.hostname.includes('console.cloud.google.com')
+      ? 14500
+      : 8500;
+
+    waitAndParse(parser, activeWaitMs, true)
       .then((result) => {
         sendResponse({
           ok: true,
