@@ -1,6 +1,6 @@
 import {
   buildUnauthenticatedResult,
-  clickElementByTextOrLabel,
+  deepQuerySelectorAll,
   extractGoogleAccountLabel,
   getVisibleText,
   isUnauthenticatedPage,
@@ -14,31 +14,12 @@ export const geminiParser: SiteParser = {
   isReady(doc) {
     const text = getVisibleText(doc);
     if (text.length < 40) return false;
-    return /(?:Gemini|Deep Research|Pro|Ultra|Advanced|Ask Gemini|问问 Gemini|Sign in|登录)/i.test(
-      text
-    );
+    return /(?:Gemini|用量限额|Usage\s*limits?|Deep Research|Pro|Ultra|Sign in|登录)/i.test(text);
   },
 
-  /** 主动后台同步时，尝试点击左下角「设置」→「用量限制 / Usage limits」展开真实用量 */
-  async prepareForActiveSync(doc) {
-    const clickedSettings = clickElementByTextOrLabel(
-      doc,
-      /^(?:Settings|设置|Settings\s*&\s*help|设置和帮助)$/i
-    );
-    if (!clickedSettings) {
-      // 兜底查找包含 settings 图标或 aria-label 的按钮
-      clickElementByTextOrLabel(doc, /Settings|设置/i);
-    }
-    await sleepMs(700);
-
-    // 点击二级菜单中的「用量限制 / Usage limits」
-    const clickedUsage = clickElementByTextOrLabel(
-      doc,
-      /Usage\s*limits?|用量限制|使用限额|配额|用量/i
-    );
-    if (clickedUsage) {
-      await sleepMs(900);
-    }
+  /** 主动后台同步时，直连 /usage 后留出一点时间等待进度条与限额文本渲染 */
+  async prepareForActiveSync() {
+    await sleepMs(1200);
   },
 
   parse(doc, url) {
@@ -55,7 +36,7 @@ export const geminiParser: SiteParser = {
     const hasPlus = /(?:^|\n)\s*(?:Plus|AI\s+Plus)\s*(?:\n|$)/i.test(text);
     const hasDeepResearch = /Deep\s+Research|深度研究/i.test(text);
 
-    // 尝试解析「用量限制 / Usage limits」弹窗中的剩余百分比或重置时间
+    // 1. 解析文本中的用量百分比（兼容「已使用 XX%」「已用 XX%」「剩余 XX%」「XX% used」「XX% remaining」）
     let usagePercent: number | undefined;
     let resetInfo: string | undefined;
 
@@ -74,8 +55,23 @@ export const geminiParser: SiteParser = {
       if (r >= 0 && r <= 100) usagePercent = 100 - r;
     }
 
+    // 2. 如果文本里没直接写数字，读取页面上 progressbar 的 aria-valuenow
+    if (usagePercent === undefined) {
+      const bars = deepQuerySelectorAll<HTMLElement>(doc, '[role="progressbar"], progress');
+      for (const bar of bars) {
+        const valStr = bar.getAttribute('aria-valuenow') ?? bar.getAttribute('value');
+        const maxStr = bar.getAttribute('aria-valuemax') ?? bar.getAttribute('max') ?? '100';
+        const val = valStr !== null ? Number(valStr) : NaN;
+        const max = Number(maxStr);
+        if (Number.isFinite(val) && Number.isFinite(max) && max > 0 && val >= 0 && val <= max) {
+          usagePercent = Math.round((val / max) * 100);
+          break;
+        }
+      }
+    }
+
     const refreshMatch = text.match(
-      /(?:刷新时间|重置时间|恢复时间|refreshes?(?:\s+at|\s+in)?|resets?(?:\s+at|\s+in)?|available\s+after)[^\n]{0,28}/i
+      /(?:刷新时间|重置时间|恢复时间|将于[^\n]{2,18}(?:重置|刷新)|refreshes?(?:\s+at|\s+in)?[^\n]{1,22}|resets?(?:\s+at|\s+in)?[^\n]{1,22})/i
     );
     if (refreshMatch) {
       resetInfo = refreshMatch[0].trim();
@@ -103,10 +99,8 @@ export const geminiParser: SiteParser = {
               : tierLabel,
           secondaryText:
             usagePercent !== undefined
-              ? '来自 Gemini「设置 → 用量限制」（5 小时滚动刷新）'
-              : hasDeepResearch
-                ? '5 小时滚动刷新 · 可在 Gemini 左下角「设置 → 用量限制」查看详细窗口'
-                : '点击直达 Gemini 网页版对话',
+              ? '来自 Gemini 用量限额页（5 小时滚动刷新）'
+              : '点击「直达」查看 Gemini 用量限额详情',
           percent: usagePercent,
           resetInfo,
         },
@@ -125,7 +119,7 @@ export const geminiParser: SiteParser = {
       status: 'fallback',
       accountLabel,
       metrics: {},
-      message: '已访问 Gemini，可在左下角「设置 → 用量限制」查看 5 小时滚动窗口',
+      message: '已访问 Gemini 用量页，可点击直达查看详情',
     };
   },
 };

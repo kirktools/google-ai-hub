@@ -41,7 +41,7 @@ export const flowParser: SiteParser = {
       }
     }
 
-    await sleepMs(1100);
+    await sleepMs(1600);
   },
 
   parse(doc, url) {
@@ -50,12 +50,12 @@ export const flowParser: SiteParser = {
       return buildUnauthenticatedResult('flow');
     }
 
-    // 匹配 "850 / 1,000 credits" 或 "AI credits: 850 / 1,000"
+    // 匹配 "850 / 1,000 credits" 或跨行 "AI 点数\n850 / 1,000"
     const pairMatch =
       text.match(
-        /(?:AI\s*credits?|credits?|点数|积分)[\s\S]{0,20}?([\d,]+)\s*(?:\/|of|共)\s*([\d,]+)/i
+        /(?:AI\s*credits?|credits?|AI\s*点数|点数|积分)[\s\S]{0,28}?([\d,]+)\s*(?:\/|of|共)\s*([\d,]+)/i
       ) ||
-      text.match(/([\d,]+)\s*(?:\/|of)\s*([\d,]+)\s*(?:AI\s*credits?|credits?|点数|积分)/i);
+      text.match(/([\d,]+)\s*(?:\/|of)\s*([\d,]+)\s*(?:AI\s*credits?|credits?|AI\s*点数|点数|积分)/i);
 
     if (pairMatch) {
       const rem = parseNumberToken(pairMatch[1]);
@@ -76,10 +76,11 @@ export const flowParser: SiteParser = {
       }
     }
 
-    // 匹配单个点数数值（如 "1,000 credits remaining" / "剩余 820 点" / 头像弹窗中的 "1000 AI Credits"）
+    // 匹配单个点数数值（支持数字与单位跨行，如 "1,000\nAI 点数" 或 "AI credits\n1,000" 或 "movie_filter\n1,000"）
     const singleMatch =
-      text.match(/([\d,]+)\s*(?:AI\s*credits?|credits?)\s*(?:left|remaining|available)?/i) ||
-      text.match(/(?:AI\s*credits?|剩余|可用)[^\n\d]{0,12}([\d,]+)\s*(?:AI\s*)?(?:点数|积分|credits?)?/i);
+      text.match(/([\d,]+)\s*(?:AI\s*credits?|credits?|AI\s*点数|点\s*AI\s*点数|积分)/i) ||
+      text.match(/(?:AI\s*credits?|AI\s*点数|剩余点数|可用点数|credits?)[\s:：]{0,16}([\d,]+)/i) ||
+      text.match(/切换账号[\s\S]{0,80}?\b([\d,]{2,6})\b/);
 
     if (singleMatch) {
       const rem = parseNumberToken(singleMatch[1]);

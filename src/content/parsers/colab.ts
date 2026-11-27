@@ -17,23 +17,22 @@ export const colabParser: SiteParser = {
     return /(?:Colab|Compute\s+Units?|计算单元|GPU|Notebook|笔记本|Sign in|登录)/i.test(text);
   },
 
-  /** 主动后台同步时，尝试点击「查看资源 / View resources」入口展开计算单元余额 */
+  /** 主动后台同步时，仅在 Colab 笔记本页面尝试点击「查看资源 / View resources」（在 /signup 介绍页禁止点击） */
   async prepareForActiveSync(doc) {
+    if (window.location.pathname.toLowerCase().includes('/signup')) {
+      return;
+    }
     const initial = getVisibleText(doc);
-    if (/[\d.,]+\s*(?:compute\s+units?|计算单元)/i.test(initial)) {
+    if (/(?:可用|剩余|Available|Balance)[^\n]{0,16}[\d.,]+\s*(?:compute\s+units?|计算单元)/i.test(initial)) {
       return;
     }
 
-    // 尝试点击 RAM/Disk 或「查看资源」按钮
     const clickedDirect = clickElementByTextOrLabel(
       doc,
-      /View\s+resources|查看资源|RAM|磁盘|Compute\s+units|计算单元/i
+      /^(?:View\s+resources|查看资源)$/i
     );
     if (clickedDirect) {
       await sleepMs(1000);
-      // 如果先展开了下拉菜单，再点一次「查看资源」
-      clickElementByTextOrLabel(doc, /View\s+resources|查看资源/i);
-      await sleepMs(800);
     }
   },
 
@@ -43,17 +42,22 @@ export const colabParser: SiteParser = {
       return buildUnauthenticatedResult('colab');
     }
 
-    // 匹配 "84.5 / 100 compute units" 或 "计算单元：84.5 / 100"
-    const pairMatch =
-      text.match(
-        /(?:compute\s+units?|计算单元)[\s\S]{0,20}?([\d.,]+)\s*(?:\/|of|共)\s*([\d.,]+)/i
-      ) ||
-      text.match(/([\d.,]+)\s*(?:\/|of)\s*([\d.,]+)\s*(?:compute\s+units?|计算单元)/i);
+    const isSignupPage = url.toLowerCase().includes('/signup');
 
-    if (pairMatch) {
-      const rem = parseNumberToken(pairMatch[1]);
-      const tot = parseNumberToken(pairMatch[2]);
-      if (rem !== undefined && tot !== undefined && tot > 0) {
+    // 过滤掉套餐价目表行（避免把 "$49.99 / 月 500 计算单元" 误判成 "剩余 49.99 / 500"）
+    const cleanText = text
+      .split('\n')
+      .filter((line) => !/(?:\$|US\$|¥|€)\s*[\d.,]+|\/\s*(?:月|month|mo\b)|购买|立即订阅|Purchase|Subscribe/i.test(line))
+      .join('\n');
+
+    // 1. 仅匹配明确带有「可用 / 剩余 / 余额 / Available / Balance」语义的计算单元，绝不误匹配套餐价目表
+    const balancePairMatch = cleanText.match(
+      /(?:可用|剩余|当前余额|余额|Available|Remaining|Balance)[^\n\d]{0,18}([\d.,]+)\s*(?:\/|of|共)\s*([\d.,]+)\s*(?:compute\s+units?|计算单元)?/i
+    );
+    if (balancePairMatch) {
+      const rem = parseNumberToken(balancePairMatch[1]);
+      const tot = parseNumberToken(balancePairMatch[2]);
+      if (rem !== undefined && tot !== undefined && tot > 0 && rem <= tot * 1.5) {
         return {
           benefitId: 'colab',
           status: 'synced',
@@ -69,13 +73,16 @@ export const colabParser: SiteParser = {
       }
     }
 
-    // 匹配单个计算单元余量（如 "Available: 96.42 compute units" / "可用计算单元 96.42"）
-    const singleMatch =
-      text.match(/([\d.,]+)\s*(?:compute\s+units?|计算单元)/i) ||
-      text.match(/(?:compute\s+units?|计算单元)[^\n\d]{0,16}([\d.,]+)/i);
+    const balanceSingleMatch =
+      cleanText.match(
+        /(?:可用计算单元|剩余计算单元|当前余额|Available\s+compute\s+units?|Remaining\s+compute\s+units?|Compute\s+units?\s+available)\s*[:：]?\s*([\d.,]+)/i
+      ) ||
+      (!isSignupPage
+        ? cleanText.match(/([\d.,]+)\s*(?:compute\s+units?|计算单元)\s*(?:available|remaining|可用|剩余)/i)
+        : null);
 
-    if (singleMatch) {
-      const rem = parseNumberToken(singleMatch[1]);
+    if (balanceSingleMatch) {
+      const rem = parseNumberToken(balanceSingleMatch[1]);
       if (rem !== undefined) {
         return {
           benefitId: 'colab',
@@ -90,15 +97,17 @@ export const colabParser: SiteParser = {
       }
     }
 
-    // 识别订阅等级提示
-    const tierMatch = text.match(/Colab\s+Pro\+|Colab\s+Pro/i);
-    if (tierMatch) {
+    // 2. 在 /signup 页若能识别出当前已订阅状态（如 "当前方案 / Current plan" 附近的 Colab Pro）
+    const activeTierMatch = cleanText.match(
+      /(?:当前方案|已订阅|Current\s+plan|Active)[\s\S]{0,40}?(Colab\s+Pro\+|Colab\s+Pro)/i
+    );
+    if (activeTierMatch) {
       return {
         benefitId: 'colab',
         status: 'synced',
         metrics: {
-          primaryText: `已识别为 ${tierMatch[0]}`,
-          secondaryText: '打开任意笔记本 → 点右上角「RAM/磁盘 → 查看资源」可自动同步精确余额',
+          primaryText: `已订阅 ${activeTierMatch[1]}`,
+          secondaryText: '打开任意 Colab 笔记本 → 右上角「查看资源」可自动同步精确计算单元',
         },
       };
     }
@@ -107,7 +116,7 @@ export const colabParser: SiteParser = {
       benefitId: 'colab',
       status: 'fallback',
       metrics: {},
-      message: '需打开任意 Colab 笔记本并点右上角「RAM/磁盘 → 查看资源」，打开后会自动顺路同步',
+      message: 'Colab 介绍页不直接显示个人余额，打开任意笔记本点右上角「查看资源」会自动顺路同步',
     };
   },
 };

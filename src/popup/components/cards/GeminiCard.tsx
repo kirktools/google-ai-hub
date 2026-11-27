@@ -26,7 +26,16 @@ export function GeminiCard(props: PlatformCardProps) {
       </div>
 
       {typeof record.metrics.percent === 'number' && (
-        <UsageBar label="手动记录用量占比" percent={record.metrics.percent} />
+        <UsageBar
+          label={record.source === 'manual' ? '手动记录用量占比' : '当前 5 小时窗口已用'}
+          percent={record.metrics.percent}
+        />
+      )}
+
+      {record.metrics.resetInfo && (
+        <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+          {record.metrics.resetInfo}
+        </p>
       )}
     </CardShell>
   );

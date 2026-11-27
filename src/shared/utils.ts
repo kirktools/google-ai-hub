@@ -95,7 +95,13 @@ export function detectBenefitIdFromUrl(urlStr: string): BenefitId | null {
   try {
     const host = new URL(urlStr).hostname.toLowerCase();
     if (host === 'one.google.com') return 'google_one';
-    if (host === 'aistudio.google.com' || host === 'me.developers.google.com') return 'ai_studio';
+    if (
+      host === 'aistudio.google.com' ||
+      host === 'me.developers.google.com' ||
+      host === 'console.cloud.google.com'
+    ) {
+      return 'ai_studio';
+    }
     if (host === 'flow.google.com' || host === 'labs.google') return 'flow';
     if (host === 'colab.research.google.com') return 'colab';
     if (host === 'gemini.google.com') return 'gemini';

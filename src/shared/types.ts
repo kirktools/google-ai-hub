@@ -134,6 +134,8 @@ export interface ParsedSiteResult {
     url: string;
     textSnippet: string;
   };
+  /** 如果需要进一步跳转到二级真实数据页（例如 Cloud /billing -> /billing/<ID>/credits/all） */
+  redirectUrl?: string;
   /** 返回套餐识别信息（google_one 权威，gemini 可辅助识别） */
   planHint?: {
     planId: PlanId;

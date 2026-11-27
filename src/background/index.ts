@@ -103,19 +103,38 @@ async function tryExtractFromExistingTab(
 ): Promise<ParsedSiteResult | null> {
   try {
     const tabs = await chrome.tabs.query({});
-    const match = tabs.find(
+    const matches = tabs.filter(
       (t) => t.id !== undefined && t.url && detectBenefitIdFromUrl(t.url) === benefitId
     );
-    if (!match?.id) return null;
+    if (matches.length === 0) return null;
 
-    // 仅在不打扰用户的前提下尝试一次提取；若该标签是安装扩展前打开的（未注入 content script）则回退
-    const response = (await chrome.tabs.sendMessage(match.id, {
-      type: 'EXTRACT_PAGE_DATA',
-      benefitId,
-    } satisfies RuntimeMessage)) as RuntimeResponse | undefined;
+    // 对于 ai_studio，优先读取已打开的 console.cloud.google.com/billing 结算页（含 $300 + $10 精确余额）
+    matches.sort((a, b) => {
+      const score = (url?: string) => {
+        if (!url) return 0;
+        const lower = url.toLowerCase();
+        if (lower.includes('console.cloud.google.com/billing') && lower.includes('credits')) return 3;
+        if (lower.includes('console.cloud.google.com/billing')) return 2;
+        if (lower.includes('me.developers.google.com')) return 1;
+        return 0;
+      };
+      return score(b.url) - score(a.url);
+    });
 
-    if (response?.ok && response.data && response.data.status !== 'fallback') {
-      return response.data;
+    for (const match of matches) {
+      if (!match.id) continue;
+      try {
+        const response = (await chrome.tabs.sendMessage(match.id, {
+          type: 'EXTRACT_PAGE_DATA',
+          benefitId,
+        } satisfies RuntimeMessage)) as RuntimeResponse | undefined;
+
+        if (response?.ok && response.data && response.data.status !== 'fallback') {
+          return response.data;
+        }
+      } catch {
+        // 该标签可能未注入脚本，继续尝试下一个匹配标签
+      }
     }
     return null;
   } catch {
@@ -160,7 +179,16 @@ async function syncSiteInReusableTab(
     }
 
     await sleep(800);
-    const result = await requestExtractionFromTab(tabId, benefitId);
+    let result = await requestExtractionFromTab(tabId, benefitId);
+
+    // 如果解析器返回了二级精准数据页（例如 Cloud /billing -> /billing/<ID>/credits/all），自动在同标签页跟进一次
+    if (result.redirectUrl) {
+      await chrome.tabs.update(tabId, { url: result.redirectUrl, active: false });
+      await waitForTabComplete(tabId, Math.floor(SINGLE_TAB_TIMEOUT_MS * 0.75));
+      await sleep(2200);
+      result = await requestExtractionFromTab(tabId, benefitId);
+    }
+
     return { tabId, result };
   } catch {
     return {

@@ -41,14 +41,19 @@ function collectShadowText(root: Document | ShadowRoot | Element, out: string[])
   }
 }
 
-/** 根据文本或 aria-label 查找并点击可交互元素（支持穿透 Shadow DOM，仅用于后台主动同步） */
+/** 根据文本或 aria-label 查找并点击可交互按钮（支持穿透 Shadow DOM，禁止点击会打开新前台标签的链接） */
 export function clickElementByTextOrLabel(
   doc: Document,
   pattern: RegExp,
-  selector = 'button, [role="button"], [role="menuitem"], a'
+  selector = 'button, [role="button"], [role="menuitem"]'
 ): boolean {
   const candidates = deepQuerySelectorAll<HTMLElement>(doc, selector);
   for (const el of candidates) {
+    // 绝对禁止点击会弹出新前台标签页的 <a> 链接，防止抢占用户当前页面焦点
+    if (el.tagName === 'A') {
+      const target = (el.getAttribute('target') || '').toLowerCase();
+      if (target === '_blank' || target === '_top') continue;
+    }
     const label = [
       el.getAttribute('aria-label') || '',
       el.getAttribute('title') || '',
@@ -83,9 +88,15 @@ export function buildSanitizedDebugInfo(doc: Document, url: string): {
   url: string;
   textSnippet: string;
 } {
-  const text = getVisibleText(doc)
-    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '***@***')
-    .slice(0, 320);
+  const full = getVisibleText(doc).replace(
+    /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
+    '***@***'
+  );
+  // 若全文较长，同时保留头部与尾部，避免侧边栏占满摘要看不到主内容
+  const text =
+    full.length <= 700
+      ? full
+      : `${full.slice(0, 320)}\n...\n${full.slice(-360)}`;
   const safeUrl = url.replace(/([?&](?:token|key|sid|auth)=)[^&]+/gi, '$1***');
   return {
     url: safeUrl,

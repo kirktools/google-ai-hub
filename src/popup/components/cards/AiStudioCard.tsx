@@ -36,12 +36,29 @@ export function AiStudioCard(props: PlatformCardProps) {
 
       {typeof record.metrics.percent === 'number' && (
         <UsageBar
-          label="本月赠金消耗"
+          label="赠金消耗占比"
           percent={record.metrics.percent}
           monthlyReset
           daysUntilReset={daysUntilReset}
         />
       )}
+
+      {record.metrics.resetInfo && (
+        <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+          {record.metrics.resetInfo}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => void chrome.tabs.create({ url: 'https://console.cloud.google.com/billing' })}
+          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        >
+          查看 Cloud 赠金明细
+          <ExternalLink className="h-3 w-3" />
+        </button>
+      </div>
 
       {hasMonthlyCredit &&
         (record.status !== 'synced' ||

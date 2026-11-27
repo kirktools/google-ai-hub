@@ -116,9 +116,12 @@ function schedulePassiveSync(): void {
   const benefitId = detected as SyncableBenefitId;
   const parser = PARSER_MAP[benefitId];
 
-  // 延迟 3 秒再读取，确保不干扰用户正常页面首屏加载
+  // 延迟 3 秒再读取，确保不干扰用户正常页面首屏加载；Cloud Console 等重型页面给更充裕等待时间
+  const passiveWaitMs = window.location.hostname.includes('console.cloud.google.com')
+    ? 12000
+    : 4500;
   window.setTimeout(() => {
-    waitAndParse(parser, 4000, false)
+    waitAndParse(parser, passiveWaitMs, false)
       .then((result) => {
         // 被动模式下只上报明确提取成功或未登录的结果，不拿 fallback 噪音刷写缓存
         if (result.status === 'synced' || result.status === 'unauthenticated') {
