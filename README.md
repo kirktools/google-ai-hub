@@ -51,13 +51,21 @@
 
 ## 三、快速安装与 Chrome 加载指南
 
-### 方式 A：直接下载预构建压缩包（推荐普通用户）
+### 方式 A：直接发给 AI 助手一键安装（最省心）
+
+如果你正在使用 **Antigravity / Claude Code / Cursor / Codex** 等 AI 编程助手，直接把下面这句话发给它即可自动克隆并构建：
+
+```text
+请帮我克隆 https://github.com/kirktools/google-ai-hub.git，使用 pnpm 安装依赖并构建出 dist 目录，然后告诉我如何在 Chrome 加载它。
+```
+
+### 方式 B：直接下载预构建压缩包（无需 Node 环境）
 
 1. 前往 [GitHub Releases](https://github.com/kirktools/google-ai-hub/releases/latest) 下载 `google-ai-hub-chrome.zip` 并解压；
 2. 打开 Chrome 地址栏输入 `chrome://extensions/` 并开启右上角 **「开发者模式」**；
 3. 点击 **「加载已解压的扩展程序」**，选择解压后的文件夹即可。
 
-### 方式 B：从源码本地构建（开发者）
+### 方式 C：从源码手动构建（开发者）
 
 - 环境要求：Node.js `>= 20`、pnpm `>= 9`
 
@@ -76,8 +84,13 @@ pnpm build
 # 仅在本地打包 release/google-ai-hub-v<version>.zip 与 SHA256SUMS.txt
 pnpm package
 
-# 一键发版：校验干净工作区 + 本地构建打包 + 自动打 v<version> 标签并推送，触发 GitHub Release
+# 一键发版（默认自动 patch +1，如 1.0.0 -> 1.0.1），自动同步 manifest 版本、构建、提交、打标签并推送
 pnpm release
+
+# 指定 minor 或 major 递增（或使用当前版本号发首版）
+pnpm release minor
+pnpm release major
+pnpm release current
 ```
 
 ### 4. 日常使用说明

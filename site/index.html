@@ -156,13 +156,18 @@
 
     <section id="install" class="section">
       <div class="container">
-        <h2>三步本地构建与加载</h2>
-        <p class="section-desc">使用 pnpm 构建，不到 1 分钟即可加载到你的 Chrome 浏览器。</p>
+        <h2>快速安装与加载</h2>
+        <p class="section-desc">支持让 AI 助手一句指令代劳、直接下载 ZIP 解压，或使用 pnpm 本地源码构建。</p>
+        <div class="card" style="margin-bottom: 16px;">
+          <h3>发给 AI 助手一键安装（Antigravity / Claude Code / Cursor / Codex）</h3>
+          <p>直接复制下方指令发给你的 AI 编程助手，自动完成克隆、依赖安装与构建：</p>
+          <pre class="code-block">请帮我克隆 https://github.com/kirktools/google-ai-hub.git，使用 pnpm 安装依赖并构建出 dist 目录，然后告诉我如何在 Chrome 加载它。</pre>
+        </div>
         <div class="steps">
           <div class="card">
             <span class="step-num">1</span>
-            <h3>克隆仓库并构建</h3>
-            <p>拉取开源源码，使用 pnpm 安装依赖并生成 <code>dist/</code> 目录。</p>
+            <h3>下载 ZIP 或克隆构建</h3>
+            <p>直接下载 <a href="https://github.com/kirktools/google-ai-hub/releases/latest/download/google-ai-hub-chrome.zip" style="color: var(--accent); text-decoration: underline;">google-ai-hub-chrome.zip</a> 解压，或本地构建：</p>
             <pre class="code-block">git clone https://github.com/kirktools/google-ai-hub.git
 cd google-ai-hub
 pnpm install &amp;&amp; pnpm build</pre>
@@ -170,12 +175,12 @@ pnpm install &amp;&amp; pnpm build</pre>
           <div class="card">
             <span class="step-num">2</span>
             <h3>加载到 Chrome</h3>
-            <p>打开 <code>chrome://extensions/</code>，启用右上角「开发者模式」，点击「加载已解压的扩展程序」，选中项目中的 <code>dist</code> 文件夹。</p>
+            <p>打开 <code>chrome://extensions/</code>，启用右上角「开发者模式」，点击「加载已解压的扩展程序」，选中解压目录或 <code>dist</code> 文件夹。</p>
           </div>
           <div class="card">
             <span class="step-num">3</span>
-            <h3>固定图标并一键同步</h3>
-            <p>将 Google AI Hub 固定到浏览器工具栏，点击「一键同步」即可自动识别当前 Google AI 套餐并汇总各平台余量。</p>
+            <h3>固定图标并自动同步</h3>
+            <p>将 Google AI Hub 固定到浏览器工具栏，首次打开自动静默识别你的 Google AI 套餐并汇总各平台余量，后续支持按小时低频自动更新。</p>
           </div>
         </div>
       </div>
