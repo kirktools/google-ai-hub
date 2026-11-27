@@ -36,13 +36,30 @@ export const colabParser: SiteParser = {
       /其他连接选项|Additional\s+connection\s+options/i
     );
     if (clickedDropdown) {
-      await sleepMs(600);
-      const clickedViewResources = clickElementByTextOrLabel(
+      await sleepMs(700);
+      // Colab 菜单项可能是 md-menu-item / mwc-list-item / goog-menuitem，且 Closure 菜单需要 mousedown+mouseup+click
+      const menuCandidates = deepQuerySelectorAll<HTMLElement>(
         doc,
-        /^(?:查看资源|View\s+resources)$/i
+        '[role="menuitem"], md-menu-item, mwc-list-item, .goog-menuitem, button, li'
       );
-      if (clickedViewResources) {
-        await sleepMs(1600);
+      const viewResEl = menuCandidates.find((el) => {
+        const t = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+        return /^(?:查看资源|View\s+resources)$/i.test(t) || /(?:^|\s)(?:查看资源|View\s+resources)$/.test(t);
+      });
+
+      if (viewResEl) {
+        viewResEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        viewResEl.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+        viewResEl.click();
+
+        // 轮询等待 <colab-paid-resources> 出现（最多 3.5 秒）
+        for (let i = 0; i < 7; i++) {
+          await sleepMs(500);
+          if (deepQuerySelectorAll(doc, 'colab-paid-resources').length > 0) {
+            await sleepMs(400);
+            break;
+          }
+        }
       }
     }
   },
