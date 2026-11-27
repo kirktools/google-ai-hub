@@ -1,6 +1,6 @@
 {
   "name": "google-ai-hub",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Google AI 权益与用量汇总看板（Chrome Manifest V3 扩展，纯本地运行、零外发、简体中文）",
   "type": "module",
