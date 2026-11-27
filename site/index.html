@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Google AI Hub — 纯本地 Google AI 权益与用量汇总看板</title>
+  <meta name="description" content="Google AI Hub 是一款纯本地运行的 Chrome Manifest V3 扩展，自动识别 Google AI Plus / Pro / Ultra 套餐，一键静默同步各平台余量，零账号密码输入、零外发请求。">
+  <link rel="canonical" href="https://kirktools.github.io/google-ai-hub/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Google AI Hub — Google AI 权益与用量汇总看板">
+  <meta property="og:description" content="自动复用 Chrome 登录态，一键静默汇总 Google One、AI Studio、Flow、Colab、Gemini 与 NotebookLM 权益余量，全程本地运行。">
+  <meta property="og:url" content="https://kirktools.github.io/google-ai-hub/">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top">
+        <img src="assets/icon.svg" alt="Google AI Hub 图标" width="28" height="28">
+        <span>Google AI Hub</span>
+      </a>
+      <nav class="nav" aria-label="主导航">
+        <a href="#features">核心功能</a>
+        <a href="#privacy">安全与权限</a>
+        <a href="#install">安装指南</a>
+        <a href="https://github.com/kirktools/google-ai-hub">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="badge">Chrome Manifest V3 · 开源免费 · 纯本地运行</p>
+          <h1>把分散在各处的 Google AI 订阅余量，收进一个清爽看板</h1>
+          <p class="lead">
+            无需输入账号密码或 API Key。Google AI Hub 直接复用 Chrome 当前的 Google 登录态，自动识别你的订阅套餐（Plus / Pro / Ultra），点击「一键同步」即可在本地汇总所有月度额度，告别月底浪费。
+          </p>
+          <div class="actions">
+            <a class="btn btn-primary" href="#install">立即安装使用</a>
+            <a class="btn btn-secondary" href="https://github.com/kirktools/google-ai-hub">查看开源源码</a>
+          </div>
+          <p class="meta">
+            支持 Chrome / Edge / Arc / Brave · 简体中文界面 · 零外发请求 · MIT 协议
+          </p>
+        </div>
+
+        <div class="demo-panel" aria-label="Google AI Hub 看板示例">
+          <div class="demo-header">
+            <div class="demo-top">
+              <span class="demo-brand">
+                <img src="assets/icon.svg" alt="" width="20" height="20">
+                Google AI Hub
+              </span>
+              <span class="demo-safe">本地安全 · 零外发</span>
+            </div>
+            <div class="demo-plan-row">
+              <span class="demo-plan">Google AI Pro · 4 天后重置</span>
+              <span class="demo-sync-btn">一键同步</span>
+            </div>
+          </div>
+          <div class="demo-body">
+            <div class="demo-alert">
+              月度防浪费提醒：距离额度重置还有 4 天，建议检查本月 AI 点数与赠金余量。
+            </div>
+            <div class="demo-card">
+              <div class="demo-card-head">
+                <span>Google One 云盘 &amp; AI Credits</span>
+                <span class="demo-tag">已同步</span>
+              </div>
+              <p>已用 412 GB / 2 TB · AI Credits 剩余 780 / 1,000 点</p>
+              <div class="demo-bar"><span style="width: 21%"></span></div>
+            </div>
+            <div class="demo-card">
+              <div class="demo-card-head">
+                <span>Google AI Studio / Cloud 赠金</span>
+                <span class="demo-tag">已同步</span>
+              </div>
+              <p>赠金余额：$8.40 / $10.00 · 建议月底前消耗</p>
+            </div>
+            <div class="demo-card">
+              <div class="demo-card-head">
+                <span>Google Flow · Google Colab</span>
+                <span class="demo-tag">已同步</span>
+              </div>
+              <p>Flow 共享 780 点 · Colab 剩余 86.5 / 100 计算单元</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="container">
+        <h2>核心功能</h2>
+        <p class="section-desc">专为 Google AI 订阅用户设计的省心体验，低频温和、开箱即用。</p>
+        <div class="card-grid">
+          <article class="card">
+            <h3>自动识别套餐，免手动配置</h3>
+            <p>优先从 Google One 页面自动识别 Free / AI Plus / AI Pro / AI Ultra (5x / 20x) 及续费重置日，自动匹配对应权益卡片；未识别到时也支持设置页手动兜底。</p>
+          </article>
+          <article class="card">
+            <h3>一键静默同步 + 顺路被动更新</h3>
+            <p>后台串行打开非激活标签页提取可见信息后立即自动关闭，不打断当前页面；内置 3 分钟冷却防抖，避免高频刷新；平时自己浏览这些站点也会顺路更新缓存。</p>
+          </article>
+          <article class="card">
+            <h3>8 大平台全景覆盖 + 手动校准</h3>
+            <p>一站汇总 Google One、AI Studio、Flow、Colab、Gemini、NotebookLM、Antigravity（5 小时滚动窗口）与生态福利。遇到页面改版自动优雅降级，并支持手动校准与排序折叠。</p>
+          </article>
+          <article class="card">
+            <h3>多账号索引与月度防浪费提醒</h3>
+            <p>支持配置 Google 账号索引（<code>/u/0/</code>、<code>authuser=0</code>），防止多账号读错号；距重置 ≤ 5 天自动提醒检查当月可消耗额度，并支持 JSON 备份导出/导入。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy" class="section">
+      <div class="container">
+        <h2>安全与隐私边界</h2>
+        <p class="section-desc">完全开源透明，严格遵循最小权限原则，让每一份数据只留在你的电脑里。</p>
+        <table class="perm-table">
+          <thead>
+            <tr>
+              <th>权限 / 机制</th>
+              <th>实际用途</th>
+              <th>安全边界</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>storage</code></td>
+              <td>将同步结果、手动校准与主题设置保存在本地 <code>chrome.storage.local</code></td>
+              <td>零外发网络请求，不上传任何服务器</td>
+            </tr>
+            <tr>
+              <td><code>tabs</code></td>
+              <td>一键同步时创建后台非激活标签页并在提取完成后立即关闭</td>
+              <td>不读取其他无关标签页或浏览历史</td>
+            </tr>
+            <tr>
+              <td>6 个官方 Google 域名</td>
+              <td>仅限 One、AI Studio、Flow、Colab、Gemini、NotebookLM 可见文本提取</td>
+              <td>不申请 <code>&lt;all_urls&gt;</code>、<code>cookies</code> 或密码权限</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="install" class="section">
+      <div class="container">
+        <h2>三步本地构建与加载</h2>
+        <p class="section-desc">使用 pnpm 构建，不到 1 分钟即可加载到你的 Chrome 浏览器。</p>
+        <div class="steps">
+          <div class="card">
+            <span class="step-num">1</span>
+            <h3>克隆仓库并构建</h3>
+            <p>拉取开源源码，使用 pnpm 安装依赖并生成 <code>dist/</code> 目录。</p>
+            <pre class="code-block">git clone https://github.com/kirktools/google-ai-hub.git
+cd google-ai-hub
+pnpm install &amp;&amp; pnpm build</pre>
+          </div>
+          <div class="card">
+            <span class="step-num">2</span>
+            <h3>加载到 Chrome</h3>
+            <p>打开 <code>chrome://extensions/</code>，启用右上角「开发者模式」，点击「加载已解压的扩展程序」，选中项目中的 <code>dist</code> 文件夹。</p>
+          </div>
+          <div class="card">
+            <span class="step-num">3</span>
+            <h3>固定图标并一键同步</h3>
+            <p>将 Google AI Hub 固定到浏览器工具栏，点击「一键同步」即可自动识别当前 Google AI 套餐并汇总各平台余量。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Google AI Hub · 开源免费（MIT License） · 纯本地运行、零外发请求</p>
+      <p>独立开源工具，与 Google LLC 无关。</p>
+    </div>
+  </footer>
+</body>
+</html>
