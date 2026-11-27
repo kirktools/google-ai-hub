@@ -39,6 +39,11 @@ export interface BenefitMetrics {
   percent?: number;
   /** 第二维度已用百分比（例如 Google One 同时有云盘占比 + AI Credits 占比） */
   secondaryPercent?: number;
+  /** 附加进度条列表（例如 Antigravity 的 Claude / GPT 5h 与每周限额） */
+  extraBars?: Array<{
+    label: string;
+    percent: number;
+  }>;
   /** 数值型已用量 */
   usedValue?: number;
   /** 数值型剩余量（用于防浪费提醒判断） */

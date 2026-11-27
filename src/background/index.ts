@@ -123,7 +123,7 @@ async function requestExtractionFromTab(
 }
 
 /** 仅按白名单域名查询已打开的同平台标签页（绝不枚举其他无关网站标签页） */
-const SYNC_URL_PATTERNS: Record<Exclude<SyncableBenefitId, 'antigravity'>, string[]> = {
+const SYNC_URL_PATTERNS: Record<SyncableBenefitId, string[]> = {
   google_one: ['https://one.google.com/*'],
   ai_studio: [
     'https://console.cloud.google.com/billing*',
@@ -134,14 +134,12 @@ const SYNC_URL_PATTERNS: Record<Exclude<SyncableBenefitId, 'antigravity'>, strin
   colab: ['https://colab.research.google.com/*'],
   gemini: ['https://gemini.google.com/*'],
   notebooklm: ['https://notebook.google.com/*', 'https://notebooklm.google.com/*'],
+  antigravity: ['https://antigravity.google.com/*'],
 };
 
 async function tryExtractFromExistingTab(
   benefitId: SyncableBenefitId
 ): Promise<ParsedSiteResult | null> {
-  // 已打开的 Antigravity 面板可能仍是旧快照，刷新时重新加载用量入口。
-  if (benefitId === 'antigravity') return null;
-
   try {
     const tabs = await chrome.tabs.query({ url: SYNC_URL_PATTERNS[benefitId] });
     const matches = tabs.filter(
@@ -221,13 +219,51 @@ async function syncSiteInReusableTab(
     await sleep(800);
     let result = await requestExtractionFromTab(tabId, benefitId);
 
-    // Antigravity 的应用可能在浏览器报告加载完成后才挂载，给同一页面再一次提取机会。
+    // Antigravity 在非激活标签页中因 visibilityState=hidden 可能暂停 React 挂载；
+    // 遇到 fallback_app_not_mounted 时，改用不抢焦点的角落极小独立窗（visible 状态）完成一次提取，立即把焦点还给原窗口并在读完后关闭。
     if (
       benefitId === 'antigravity' &&
       result.status === 'fallback' &&
       result.debugInfo?.reason === 'fallback_app_not_mounted'
     ) {
-      result = await requestExtractionFromTab(tabId, benefitId);
+      let tempWinId: number | undefined;
+      let originWinId: number | undefined;
+      try {
+        const originWin = await chrome.windows.getLastFocused().catch(() => undefined);
+        originWinId = originWin?.id;
+
+        const win = await chrome.windows.create({
+          url,
+          type: 'popup',
+          focused: false,
+          width: 320,
+          height: 240,
+          left: 9999,
+          top: 9999,
+        });
+        tempWinId = win?.id;
+
+        // macOS 下新建窗口可能短暂抢焦点，立刻把焦点切回用户原窗口
+        if (originWinId !== undefined) {
+          chrome.windows.update(originWinId, { focused: true }).catch(() => {});
+        }
+
+        const winTabId = win?.tabs?.[0]?.id;
+        if (winTabId !== undefined) {
+          await waitForTabComplete(winTabId, Math.floor(SINGLE_TAB_TIMEOUT_MS * 0.75));
+          await sleep(1000);
+          result = await requestExtractionFromTab(winTabId, benefitId);
+        }
+      } catch {
+        // 保持原 fallback 结果
+      } finally {
+        if (tempWinId !== undefined) {
+          chrome.windows.remove(tempWinId).catch(() => {});
+        }
+        if (originWinId !== undefined) {
+          chrome.windows.update(originWinId, { focused: true }).catch(() => {});
+        }
+      }
     }
 
     // 如果解析器返回了二级精准数据页（例如 Cloud /billing -> /billing/<ID>/credits/all），自动在同标签页跟进一次

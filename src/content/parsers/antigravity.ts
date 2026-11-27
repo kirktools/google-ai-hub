@@ -112,7 +112,15 @@ export const antigravityParser: SiteParser = {
 
   /** 主动后台同步时，确保 Models & Usage 弹层打开，并轮询等待 GetUserQuotaSummary RPC 渲染完百分比 */
   async prepareForActiveSync(doc) {
+    // 如果复用的是已打开的 Antigravity 标签且额度面板已展开，先点一下「刷新额度」拿最新数据
     if (hasRenderedQuotaCircles(doc)) {
+      const refreshBtn = doc.querySelector<HTMLElement>(
+        'button[aria-label="Refresh quota and credits data"]'
+      );
+      if (refreshBtn) {
+        refreshBtn.click();
+        await sleepMs(1600);
+      }
       return;
     }
 
@@ -238,6 +246,18 @@ export const antigravityParser: SiteParser = {
       geminiQuota.fiveHourRemaining !== undefined ? 100 - geminiQuota.fiveHourRemaining : undefined;
     const geminiUsedWeekly =
       geminiQuota.weeklyRemaining !== undefined ? 100 - geminiQuota.weeklyRemaining : undefined;
+    const claudeUsed5h =
+      claudeQuota.fiveHourRemaining !== undefined ? 100 - claudeQuota.fiveHourRemaining : undefined;
+    const claudeUsedWeekly =
+      claudeQuota.weeklyRemaining !== undefined ? 100 - claudeQuota.weeklyRemaining : undefined;
+
+    const extraBars: Array<{ label: string; percent: number }> = [];
+    if (claudeUsed5h !== undefined) {
+      extraBars.push({ label: 'Claude / GPT 5 小时窗口已用', percent: claudeUsed5h });
+    }
+    if (claudeUsedWeekly !== undefined) {
+      extraBars.push({ label: 'Claude / GPT 每周限额已用', percent: claudeUsedWeekly });
+    }
 
     const primaryParts: string[] = [];
     if (geminiQuota.fiveHourRemaining !== undefined) {
@@ -278,6 +298,7 @@ export const antigravityParser: SiteParser = {
             : '来自 Antigravity Web Models & Usage 实时额度',
         percent: geminiUsed5h,
         secondaryPercent: geminiUsedWeekly,
+        extraBars: extraBars.length > 0 ? extraBars : undefined,
         remainingValue: geminiQuota.fiveHourRemaining,
         totalValue: 100,
         unit: '%',

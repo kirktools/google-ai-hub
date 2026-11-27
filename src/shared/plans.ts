@@ -157,13 +157,13 @@ export const DEFAULT_CARD_ORDER: BenefitId[] = [
 ];
 
 export const QUICK_SYNC_QUEUE: SyncableBenefitId[] = [
-  'google_one',
+  'antigravity',
   'gemini',
+  'google_one',
   'ai_studio',
   'flow',
   'colab',
   'notebooklm',
-  'antigravity',
 ];
 
 export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
