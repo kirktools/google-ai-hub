@@ -16,6 +16,7 @@ import {
 import type {
   HubStorageState,
   PlanId,
+  ProgressBarMode,
   ThemeMode,
   UserSettings,
 } from '../../shared/types';
@@ -241,6 +242,33 @@ export function SettingsView({
                 onClick={() => void onUpdateSettings({ theme: mode })}
                 className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
                   state.settings.theme === mode
+                    ? 'bg-white text-indigo-600 shadow-xs dark:bg-slate-700 dark:text-indigo-300'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-800">
+          <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+            进度条展示
+          </span>
+          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+            {(
+              [
+                ['used', '按使用量'],
+                ['remaining', '按剩余量'],
+              ] as [ProgressBarMode, string][]
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => void onUpdateSettings({ progressBarMode: mode })}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                  state.settings.progressBarMode === mode
                     ? 'bg-white text-indigo-600 shadow-xs dark:bg-slate-700 dark:text-indigo-300'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}

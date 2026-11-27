@@ -32,6 +32,7 @@ import { EcosystemCard } from './components/EcosystemCard';
 import { Header } from './components/Header';
 import { SettingsView } from './components/SettingsView';
 import { PLATFORM_CARD_REGISTRY } from './components/cards';
+import { ProgressBarModeContext } from './components/cards/UsageBar';
 
 export function App() {
   const [state, setState] = useState<HubStorageState>(() => createInitialState());
@@ -291,58 +292,60 @@ export function App() {
             )}
 
             {/* 权益卡片列表 */}
-            {visibleCardOrder.map((id, idx) => {
-              const collapsed = state.settings.collapsedCards.includes(id);
-              const canMoveUp = idx > 0;
-              const canMoveDown = idx < visibleCardOrder.length - 1;
+            <ProgressBarModeContext.Provider value={state.settings.progressBarMode}>
+              {visibleCardOrder.map((id, idx) => {
+                const collapsed = state.settings.collapsedCards.includes(id);
+                const canMoveUp = idx > 0;
+                const canMoveDown = idx < visibleCardOrder.length - 1;
 
-              if (id === 'ecosystem') {
+                if (id === 'ecosystem') {
+                  return (
+                    <EcosystemCard
+                      key={id}
+                      perks={activePlan.ecosystemPerks}
+                      collapsed={collapsed}
+                      canMoveUp={canMoveUp}
+                      canMoveDown={canMoveDown}
+                      onToggleCollapse={() => handleToggleCollapse(id)}
+                      onMoveUp={() => handleMoveCard(id, -1)}
+                      onMoveDown={() => handleMoveCard(id, 1)}
+                      onOpenBenefits={() => handleOpenSite('ecosystem')}
+                    />
+                  );
+                }
+
+                const catalog = BENEFIT_CATALOG[id];
+                const CardComponent = PLATFORM_CARD_REGISTRY[id];
                 return (
-                  <EcosystemCard
+                  <CardComponent
                     key={id}
-                    perks={activePlan.ecosystemPerks}
+                    catalog={catalog}
+                    plan={activePlan}
+                    planMeta={activePlan.benefits[id]}
+                    record={state.benefits[id]}
+                    daysUntilReset={daysUntilReset}
                     collapsed={collapsed}
+                    isSyncingThis={
+                      state.syncProgress.running &&
+                      state.syncProgress.currentTargetId === id
+                    }
+                    isGlobalSyncing={state.syncProgress.running}
                     canMoveUp={canMoveUp}
                     canMoveDown={canMoveDown}
                     onToggleCollapse={() => handleToggleCollapse(id)}
                     onMoveUp={() => handleMoveCard(id, -1)}
                     onMoveDown={() => handleMoveCard(id, 1)}
-                    onOpenBenefits={() => handleOpenSite('ecosystem')}
+                    onOpenSite={() => handleOpenSite(id)}
+                    onRefreshSingle={
+                      catalog.syncable
+                        ? () => void handleSyncSingle(id as SyncableBenefitId)
+                        : undefined
+                    }
+                    onCalibrate={() => setCalibratingId(id)}
                   />
                 );
-              }
-
-              const catalog = BENEFIT_CATALOG[id];
-              const CardComponent = PLATFORM_CARD_REGISTRY[id];
-              return (
-                <CardComponent
-                  key={id}
-                  catalog={catalog}
-                  plan={activePlan}
-                  planMeta={activePlan.benefits[id]}
-                  record={state.benefits[id]}
-                  daysUntilReset={daysUntilReset}
-                  collapsed={collapsed}
-                  isSyncingThis={
-                    state.syncProgress.running &&
-                    state.syncProgress.currentTargetId === id
-                  }
-                  isGlobalSyncing={state.syncProgress.running}
-                  canMoveUp={canMoveUp}
-                  canMoveDown={canMoveDown}
-                  onToggleCollapse={() => handleToggleCollapse(id)}
-                  onMoveUp={() => handleMoveCard(id, -1)}
-                  onMoveDown={() => handleMoveCard(id, 1)}
-                  onOpenSite={() => handleOpenSite(id)}
-                  onRefreshSingle={
-                    catalog.syncable
-                      ? () => void handleSyncSingle(id as SyncableBenefitId)
-                      : undefined
-                  }
-                  onCalibrate={() => setCalibratingId(id)}
-                />
-              );
-            })}
+              })}
+            </ProgressBarModeContext.Provider>
 
             <footer className="pb-1 pt-2 text-center text-[10px] text-slate-400 dark:text-slate-500">
               {state.planDetection.detectedAccountLabel

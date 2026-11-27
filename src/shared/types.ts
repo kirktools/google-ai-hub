@@ -30,6 +30,8 @@ export type SyncItemStatus =
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+export type ProgressBarMode = 'used' | 'remaining';
+
 export interface BenefitMetrics {
   /** 主展示文案（如 "已用 412 GB / 2 TB" 或 "剩余 850 / 1,000 点"） */
   primaryText?: string;
@@ -109,6 +111,8 @@ export interface UserSettings {
   manualResetDay: number | null;
   /** 主题模式 */
   theme: ThemeMode;
+  /** 进度条展示方式：按使用量（默认）或按剩余量 */
+  progressBarMode: ProgressBarMode;
   /** 卡片展示顺序 */
   cardOrder: BenefitId[];
   /** 已折叠的卡片集合 */
