@@ -9,7 +9,9 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "vite build && vite build --config vite.content.config.ts",
-    "check": "pnpm typecheck && pnpm build"
+    "check": "pnpm typecheck && pnpm build",
+    "package": "node scripts/package-release.mjs",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

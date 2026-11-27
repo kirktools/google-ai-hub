@@ -51,11 +51,15 @@
 
 ## 三、快速安装与 Chrome 加载指南
 
-### 1. 环境要求
-- Node.js `>= 20`
-- pnpm `>= 9`
+### 方式 A：直接下载预构建压缩包（推荐普通用户）
 
-### 2. 克隆并构建扩展
+1. 前往 [GitHub Releases](https://github.com/kirktools/google-ai-hub/releases/latest) 下载 `google-ai-hub-chrome.zip` 并解压；
+2. 打开 Chrome 地址栏输入 `chrome://extensions/` 并开启右上角 **「开发者模式」**；
+3. 点击 **「加载已解压的扩展程序」**，选择解压后的文件夹即可。
+
+### 方式 B：从源码本地构建（开发者）
+
+- 环境要求：Node.js `>= 20`、pnpm `>= 9`
 
 ```bash
 git clone https://github.com/kirktools/google-ai-hub.git
@@ -64,15 +68,17 @@ pnpm install
 pnpm build
 ```
 
-构建完成后，会在项目根目录下生成可直接加载的 `dist/` 文件夹。
+构建完成后，在 `chrome://extensions/` 加载 `google-ai-hub/dist` 目录即可。
 
-### 3. 加载到 Chrome / Edge / Arc / Brave
+### 发布命令
 
-1. 在浏览器地址栏输入 `chrome://extensions/` 并回车；
-2. 打开右上角的 **「开发者模式（Developer mode）」** 开关；
-3. 点击左上角 **「加载已解压的扩展程序（Load unpacked）」**；
-4. 选择刚才生成的 `google-ai-hub/dist` 目录；
-5. 建议点击地址栏右侧的拼图图标，将 **Google AI Hub** 固定（Pin）到工具栏，随时一键呼出。
+```bash
+# 仅在本地打包 release/google-ai-hub-v<version>.zip 与 SHA256SUMS.txt
+pnpm package
+
+# 一键发版：校验干净工作区 + 本地构建打包 + 自动打 v<version> 标签并推送，触发 GitHub Release
+pnpm release
+```
 
 ### 4. 日常使用说明
 
