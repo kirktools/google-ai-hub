@@ -50,12 +50,12 @@
 
 ## 三、快速安装与 Chrome 加载指南
 
-### 方式 A：直接发给 AI 助手一键安装（最省心）
+### 方式 A：直接发给 AI 助手一键安装（最省心，无需 Node 环境）
 
-如果你正在使用 **Antigravity / Claude Code / Cursor / Codex** 等 AI 编程助手，直接把下面这句话发给它即可自动克隆并构建：
+如果你正在使用 **Antigravity / Claude Code / Cursor / Codex** 等 AI 助手，直接把下面这句话发给它即可自动下载预构建包并解压：
 
 ```text
-请帮我克隆 https://github.com/kirktools/google-ai-hub.git，使用 pnpm 安装依赖并构建出 dist 目录，然后告诉我如何在 Chrome 加载它。
+请帮我下载 https://github.com/kirktools/google-ai-hub/releases/latest/download/google-ai-hub-chrome.zip 并解压到本地一个固定目录，然后告诉我如何在 Chrome 中加载这个扩展。
 ```
 
 ### 方式 B：直接下载预构建压缩包（无需 Node 环境）
@@ -159,14 +159,15 @@ google-ai-hub/
 │   │   └── index.ts              # Service Worker：单标签复用同步、定时闹钟与 3 分钟冷却防抖
 │   ├── content/
 │   │   ├── index.ts              # Content Script 入口：主动提取与顺路被动同步
-│   │   └── parsers/              # 按站点拆分的独立 DOM 解析器（支持 Shadow DOM 与中英文容错）
-│   │       ├── types.ts
-│   │       ├── googleOne.ts
-│   │       ├── aiStudio.ts
-│   │       ├── flow.ts
-│   │       ├── colab.ts
-│   │       ├── gemini.ts
-│   │       └── notebookLm.ts
+│   │   ├── parsers/              # 按站点拆分的独立 DOM 解析器（支持 Shadow DOM 与中英文容错）
+│   │   │   ├── types.ts
+│   │   │   ├── googleOne.ts
+│   │   │   ├── aiStudio.ts
+│   │   │   ├── flow.ts
+│   │   │   ├── colab.ts
+│   │   │   ├── gemini.ts
+│   │   │   ├── notebookLm.ts
+│   │   │   └── antigravity.ts
 │   └── popup/                    # 400px 宽 React + Tailwind CSS 现代卡片看板
 │       ├── App.tsx
 │       └── components/
