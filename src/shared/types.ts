@@ -97,8 +97,6 @@ export interface SyncProgressState {
 }
 
 export interface UserSettings {
-  /** Google 多账号索引（默认 0，对应 authuser=0 / /u/0/） */
-  accountIndex: number;
   /** 手动覆盖套餐（null 表示跟随自动识别） */
   manualPlanOverride: PlanId | null;
   /** 手动覆盖账单/额度重置日（1-31，null 表示跟随自动识别） */
@@ -111,6 +109,8 @@ export interface UserSettings {
   collapsedCards: BenefitId[];
   /** 是否开启月度防浪费提醒（距重置日 <= 5 天） */
   wasteAlertEnabled: boolean;
+  /** 低频定时自动同步间隔（分钟）：0 表示关闭，最低 60 分钟（1 小时） */
+  autoSyncIntervalMinutes: number;
 }
 
 export interface HubStorageState {

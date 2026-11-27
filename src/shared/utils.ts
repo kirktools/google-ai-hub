@@ -10,27 +10,9 @@ export const SINGLE_TAB_TIMEOUT_MS = 16_000;
 /** 距重置日 <= 5 天时触发月度防浪费提醒 */
 export const WASTE_ALERT_DAYS_THRESHOLD = 5;
 
-/** 根据账号索引生成对应平台的直达 URL */
-export function buildAccountUrl(benefitId: BenefitId, accountIndex: number): string {
-  const item = BENEFIT_CATALOG[benefitId];
-  const safeIdx = Number.isInteger(accountIndex) && accountIndex >= 0 ? accountIndex : 0;
-
-  if (item.accountUrlStrategy === 'none') {
-    return item.baseUrl;
-  }
-
-  try {
-    const url = new URL(item.baseUrl);
-    if (item.accountUrlStrategy === 'u_path') {
-      const cleanPath = url.pathname.replace(/^\/u\/\d+\/?/, '/');
-      url.pathname = `/u/${safeIdx}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
-      return url.toString();
-    }
-    url.searchParams.set('authuser', String(safeIdx));
-    return url.toString();
-  } catch {
-    return item.baseUrl;
-  }
+/** 获取对应平台的直达 URL（直接使用 Chrome 当前默认登录的 Google 账号） */
+export function buildAccountUrl(benefitId: BenefitId): string {
+  return BENEFIT_CATALOG[benefitId].baseUrl;
 }
 
 /** 计算当前生效的套餐 ID（手动覆盖优先，其次自动识别，最后默认 free） */

@@ -2,6 +2,8 @@ import { BENEFIT_CATALOG, QUICK_SYNC_QUEUE } from '../shared/plans';
 import {
   applyParsedSiteResult,
   loadState,
+  normalizeState,
+  STORAGE_KEY,
   updateSyncProgress,
 } from '../shared/storage';
 import type {
@@ -17,7 +19,18 @@ import {
   SYNC_COOLDOWN_MS,
 } from '../shared/utils';
 
+const AUTO_SYNC_ALARM_NAME = 'google_ai_hub_auto_sync';
 let isSyncLocked = false;
+
+/** 根据用户设置维护低频定时同步闹钟（最低 60 分钟，防止高频轮询） */
+async function syncAutoAlarmSchedule(intervalMinutes: number): Promise<void> {
+  await chrome.alarms.clear(AUTO_SYNC_ALARM_NAME);
+  if (intervalMinutes >= 60) {
+    chrome.alarms.create(AUTO_SYNC_ALARM_NAME, {
+      periodInMinutes: intervalMinutes,
+    });
+  }
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -79,7 +92,7 @@ async function requestExtractionFromTab(
             benefitId,
             status: 'unauthenticated',
             metrics: {},
-            message: '请先在 Chrome 登录 Google 账号，或检查设置中的账号索引（/u/0/）',
+            message: '请先在 Chrome 登录 Google 账号',
           };
         }
       } catch {
@@ -157,10 +170,9 @@ async function tryExtractFromExistingTab(
 /** 使用同一个可复用的后台标签页完成单个站点同步，避免反复打开关闭多个标签 */
 async function syncSiteInReusableTab(
   benefitId: SyncableBenefitId,
-  accountIndex: number,
   sharedTabId: number | undefined
 ): Promise<{ result: ParsedSiteResult; tabId: number | undefined }> {
-  const url = buildAccountUrl(benefitId, accountIndex);
+  const url = buildAccountUrl(benefitId);
   let tabId = sharedTabId;
 
   try {
@@ -185,7 +197,7 @@ async function syncSiteInReusableTab(
           benefitId,
           status: 'unauthenticated',
           metrics: {},
-          message: '请先在 Chrome 登录 Google 账号，或检查设置中的账号索引（/u/0/）',
+          message: '请先在 Chrome 登录 Google 账号',
         },
       };
     }
@@ -226,7 +238,6 @@ async function runSyncQueue(
 
   try {
     const state = await loadState();
-    const accountIndex = state.settings.accountIndex;
 
     await updateSyncProgress({
       running: true,
@@ -257,11 +268,7 @@ async function runSyncQueue(
         await applyParsedSiteResult(existingResult);
       } else {
         // 2. 否则复用唯一一个后台标签页顺序跳转，避免标签栏反复开合
-        const { result, tabId } = await syncSiteInReusableTab(
-          targetId,
-          accountIndex,
-          reusableTabId
-        );
+        const { result, tabId } = await syncSiteInReusableTab(targetId, reusableTabId);
         reusableTabId = tabId;
         await applyParsedSiteResult(result);
       }
@@ -360,10 +367,34 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
+// 低频定时同步触发
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== AUTO_SYNC_ALARM_NAME) return;
+  void loadState().then((state) => {
+    if (isSyncLocked || state.syncProgress.running) return;
+    if (state.settings.autoSyncIntervalMinutes < 60) return;
+    void runSyncQueue(QUICK_SYNC_QUEUE, 'all');
+  });
+});
+
+// 当用户在设置页修改定时同步间隔时，立即更新闹钟计划
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local' || !changes[STORAGE_KEY]) return;
+  const next = normalizeState(changes[STORAGE_KEY].newValue);
+  const prev = normalizeState(changes[STORAGE_KEY].oldValue);
+  if (next.settings.autoSyncIntervalMinutes !== prev.settings.autoSyncIntervalMinutes) {
+    void syncAutoAlarmSchedule(next.settings.autoSyncIntervalMinutes);
+  }
+});
+
 chrome.runtime.onStartup.addListener(() => {
-  void updateSyncProgress({ running: false, mode: null, currentTargetId: null });
+  void updateSyncProgress({ running: false, mode: null, currentTargetId: null }).then((state) =>
+    syncAutoAlarmSchedule(state.settings.autoSyncIntervalMinutes)
+  );
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  void updateSyncProgress({ running: false, mode: null, currentTargetId: null });
+  void updateSyncProgress({ running: false, mode: null, currentTargetId: null }).then((state) =>
+    syncAutoAlarmSchedule(state.settings.autoSyncIntervalMinutes)
+  );
 });

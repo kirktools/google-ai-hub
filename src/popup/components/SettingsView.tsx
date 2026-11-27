@@ -114,32 +114,42 @@ export function SettingsView({
         </div>
       )}
 
-      {/* 多账号索引 */}
+      {/* 当前已识别账号（只读展示） */}
+      {state.planDetection.detectedAccountLabel && (
+        <section className="rounded-xl border border-slate-200/90 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+            当前已登录 Google 账号
+          </h2>
+          <p className="mt-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+            {state.planDetection.detectedAccountLabel}
+          </p>
+        </section>
+      )}
+
+      {/* 低频定时自动同步 */}
       <section className="rounded-xl border border-slate-200/90 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-          Google 多账号索引（authuser）
-        </h2>
-        <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-          若浏览器同时登录了多个 Google 账号，选择主订阅账号对应的序号，避免读错号。
-          {state.planDetection.detectedAccountLabel && (
-            <span className="mt-1 block font-medium text-indigo-600 dark:text-indigo-400">
-              当前已识别账号：{state.planDetection.detectedAccountLabel}
-            </span>
-          )}
-        </p>
-        <div className="mt-2.5 flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              定时后台自动同步
+            </h2>
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              低频自动刷新缓存（最低 1 小时，打开面板即可秒看数据）
+            </p>
+          </div>
           <select
-            value={state.settings.accountIndex}
+            value={state.settings.autoSyncIntervalMinutes}
             onChange={(e) =>
-              void onUpdateSettings({ accountIndex: Number(e.target.value) })
+              void onUpdateSettings({ autoSyncIntervalMinutes: Number(e.target.value) })
             }
-            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
-            {[0, 1, 2, 3, 4, 5].map((idx) => (
-              <option key={idx} value={idx}>
-                账号 #{idx}（/u/{idx}/ · authuser={idx}）
-              </option>
-            ))}
+            <option value={0}>关闭（仅手动）</option>
+            <option value={60}>每 1 小时（推荐）</option>
+            <option value={120}>每 2 小时</option>
+            <option value={240}>每 4 小时</option>
+            <option value={360}>每 6 小时</option>
+            <option value={720}>每 12 小时</option>
           </select>
         </div>
       </section>

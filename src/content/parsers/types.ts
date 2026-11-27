@@ -214,6 +214,6 @@ export function buildUnauthenticatedResult(benefitId: SyncableBenefitId): Parsed
     benefitId,
     status: 'unauthenticated',
     metrics: {},
-    message: '请先在 Chrome 登录 Google 账号，或检查设置中的账号索引（/u/0/）',
+    message: '请先在 Chrome 登录 Google 账号',
   };
 }

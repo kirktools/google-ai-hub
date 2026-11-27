@@ -180,7 +180,7 @@ export function App() {
   };
 
   const handleOpenSite = (benefitId: BenefitId) => {
-    const url = buildAccountUrl(benefitId, state.settings.accountIndex);
+    const url = buildAccountUrl(benefitId);
     void chrome.tabs.create({ url });
   };
 
@@ -346,8 +346,8 @@ export function App() {
 
             <footer className="pb-1 pt-2 text-center text-[10px] text-slate-400 dark:text-slate-500">
               {state.planDetection.detectedAccountLabel
-                ? `当前账号：${state.planDetection.detectedAccountLabel}（/u/${state.settings.accountIndex}/）`
-                : `复用 Chrome 本地 Google 登录态 · 账号索引 /u/${state.settings.accountIndex}/`}
+                ? `当前账号：${state.planDetection.detectedAccountLabel}`
+                : '复用 Chrome 当前本地 Google 登录态 · 纯本地运行'}
             </footer>
           </div>
         )}

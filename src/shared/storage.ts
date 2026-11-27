@@ -32,13 +32,13 @@ export function createInitialState(): HubStorageState {
   return {
     version: SCHEMA_VERSION,
     settings: {
-      accountIndex: 0,
       manualPlanOverride: null,
       manualResetDay: null,
       theme: 'system',
       cardOrder: [...DEFAULT_CARD_ORDER],
       collapsedCards: ['ecosystem'],
       wasteAlertEnabled: true,
+      autoSyncIntervalMinutes: 60,
     },
     planDetection: {
       detectedPlanId: null,
@@ -79,10 +79,9 @@ export function normalizeState(raw: unknown): HubStorageState {
     if (!dedupedOrder.includes(id)) dedupedOrder.push(id);
   }
   mergedSettings.cardOrder = Array.from(new Set(dedupedOrder));
-  mergedSettings.accountIndex =
-    typeof mergedSettings.accountIndex === 'number' && mergedSettings.accountIndex >= 0
-      ? Math.floor(mergedSettings.accountIndex)
-      : 0;
+  const rawInterval = mergedSettings.autoSyncIntervalMinutes;
+  mergedSettings.autoSyncIntervalMinutes =
+    typeof rawInterval === 'number' && rawInterval >= 60 ? Math.floor(rawInterval) : 0;
 
   const mergedBenefits = { ...base.benefits };
   if (data.benefits && typeof data.benefits === 'object') {
