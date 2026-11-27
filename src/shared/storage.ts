@@ -35,7 +35,7 @@ export function createInitialState(): HubStorageState {
       manualPlanOverride: null,
       manualResetDay: null,
       theme: 'system',
-      progressBarMode: 'used',
+      progressBarMode: 'remaining',
       cardOrder: [...DEFAULT_CARD_ORDER],
       collapsedCards: ['ecosystem'],
       wasteAlertEnabled: true,
@@ -84,7 +84,7 @@ export function normalizeState(raw: unknown): HubStorageState {
   mergedSettings.autoSyncIntervalMinutes =
     typeof rawInterval === 'number' && rawInterval >= 60 ? Math.floor(rawInterval) : 0;
   mergedSettings.progressBarMode =
-    mergedSettings.progressBarMode === 'remaining' ? 'remaining' : 'used';
+    mergedSettings.progressBarMode === 'used' ? 'used' : 'remaining';
 
   const mergedBenefits = { ...base.benefits };
   if (data.benefits && typeof data.benefits === 'object') {

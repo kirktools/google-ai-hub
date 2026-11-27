@@ -291,8 +291,8 @@ export function SettingsView({
           <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
             {(
               [
-                ['used', '按使用量'],
                 ['remaining', '按剩余量'],
+                ['used', '按使用量'],
               ] as [ProgressBarMode, string][]
             ).map(([mode, label]) => (
               <button

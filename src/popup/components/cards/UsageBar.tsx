@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { ProgressBarMode } from '../../../shared/types';
 
-export const ProgressBarModeContext = createContext<ProgressBarMode>('used');
+export const ProgressBarModeContext = createContext<ProgressBarMode>('remaining');
 
 interface UsageBarProps {
   label: string;

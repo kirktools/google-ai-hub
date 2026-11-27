@@ -56,6 +56,8 @@ export interface BenefitMetrics {
   unit?: string;
   /** 下次重置/刷新日期 ISO 字符串或简短描述 */
   resetInfo?: string;
+  /** 第二组额度的重置/刷新描述（例如 Antigravity 的 Claude / GPT 重置倒计时） */
+  secondaryResetInfo?: string;
   /** 自定义备注（常用于手动校准或 Antigravity 5小时滚动刷新记录） */
   note?: string;
 }

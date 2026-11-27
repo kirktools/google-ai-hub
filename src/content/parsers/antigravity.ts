@@ -253,10 +253,10 @@ export const antigravityParser: SiteParser = {
 
     const extraBars: Array<{ label: string; percent: number }> = [];
     if (claudeUsed5h !== undefined) {
-      extraBars.push({ label: 'Claude / GPT 5 小时窗口已用', percent: claudeUsed5h });
+      extraBars.push({ label: '5 小时窗口已用', percent: claudeUsed5h });
     }
     if (claudeUsedWeekly !== undefined) {
-      extraBars.push({ label: 'Claude / GPT 每周限额已用', percent: claudeUsedWeekly });
+      extraBars.push({ label: '每周限额已用', percent: claudeUsedWeekly });
     }
 
     const primaryParts: string[] = [];
@@ -275,12 +275,20 @@ export const antigravityParser: SiteParser = {
       claudeParts.push(`每周剩 ${claudeQuota.weeklyRemaining}%`);
     }
 
-    const refreshParts: string[] = [];
+    const geminiRefreshParts: string[] = [];
     if (geminiQuota.fiveHourRefresh) {
-      refreshParts.push(`5h 重置：${localizeDurationToZh(geminiQuota.fiveHourRefresh)}后`);
+      geminiRefreshParts.push(`5h 重置：${localizeDurationToZh(geminiQuota.fiveHourRefresh)}后`);
     }
     if (geminiQuota.weeklyRefresh) {
-      refreshParts.push(`每周重置：${localizeDurationToZh(geminiQuota.weeklyRefresh)}后`);
+      geminiRefreshParts.push(`每周重置：${localizeDurationToZh(geminiQuota.weeklyRefresh)}后`);
+    }
+
+    const claudeRefreshParts: string[] = [];
+    if (claudeQuota.fiveHourRefresh) {
+      claudeRefreshParts.push(`5h 重置：${localizeDurationToZh(claudeQuota.fiveHourRefresh)}后`);
+    }
+    if (claudeQuota.weeklyRefresh) {
+      claudeRefreshParts.push(`每周重置：${localizeDurationToZh(claudeQuota.weeklyRefresh)}后`);
     }
 
     return {
@@ -302,7 +310,9 @@ export const antigravityParser: SiteParser = {
         remainingValue: geminiQuota.fiveHourRemaining,
         totalValue: 100,
         unit: '%',
-        resetInfo: refreshParts.length > 0 ? refreshParts.join(' · ') : undefined,
+        resetInfo: geminiRefreshParts.length > 0 ? geminiRefreshParts.join(' · ') : undefined,
+        secondaryResetInfo:
+          claudeRefreshParts.length > 0 ? claudeRefreshParts.join(' · ') : undefined,
       },
     };
   },
