@@ -146,13 +146,13 @@ export const BENEFIT_CATALOG: Record<BenefitId, BenefitCatalogItem> = {
 };
 
 export const DEFAULT_CARD_ORDER: BenefitId[] = [
+  'antigravity',
+  'gemini',
   'google_one',
   'ai_studio',
   'flow',
   'colab',
-  'gemini',
   'notebooklm',
-  'antigravity',
   'ecosystem',
 ];
 
