@@ -1,6 +1,7 @@
 import {
   buildUnauthenticatedResult,
   clickElementByTextOrLabel,
+  deepQuerySelectorAll,
   getVisibleText,
   isUnauthenticatedPage,
   parseNumberToken,
@@ -14,25 +15,35 @@ export const colabParser: SiteParser = {
   isReady(doc) {
     const text = getVisibleText(doc);
     if (text.length < 60) return false;
-    return /(?:Colab|Compute\s+Units?|计算单元|GPU|Notebook|笔记本|Sign in|登录)/i.test(text);
+    return /(?:Colab|Compute\s+Units?|计算单元|代码执行程序|其他连接选项|Additional\s+connection|GPU|Notebook|Sign in|登录)/i.test(
+      text
+    );
   },
 
-  /** 主动后台同步时，仅在 Colab 笔记本页面尝试点击「查看资源 / View resources」（在 /signup 介绍页禁止点击） */
+  /** 主动后台同步时，点击右上角「其他连接选项」→「查看资源」展开 <colab-paid-resources> */
   async prepareForActiveSync(doc) {
     if (window.location.pathname.toLowerCase().includes('/signup')) {
       return;
     }
-    const initial = getVisibleText(doc);
-    if (/(?:可用|剩余|Available|Balance)[^\n]{0,16}[\d.,]+\s*(?:compute\s+units?|计算单元)/i.test(initial)) {
+
+    // 如果资源面板已经打开，直接读取
+    if (doc.querySelector('colab-paid-resources')) {
       return;
     }
 
-    const clickedDirect = clickElementByTextOrLabel(
+    const clickedDropdown = clickElementByTextOrLabel(
       doc,
-      /^(?:View\s+resources|查看资源)$/i
+      /其他连接选项|Additional\s+connection\s+options/i
     );
-    if (clickedDirect) {
-      await sleepMs(1000);
+    if (clickedDropdown) {
+      await sleepMs(600);
+      const clickedViewResources = clickElementByTextOrLabel(
+        doc,
+        /^(?:查看资源|View\s+resources)$/i
+      );
+      if (clickedViewResources) {
+        await sleepMs(1600);
+      }
     }
   },
 
@@ -42,81 +53,76 @@ export const colabParser: SiteParser = {
       return buildUnauthenticatedResult('colab');
     }
 
-    const isSignupPage = url.toLowerCase().includes('/signup');
-
-    // 过滤掉套餐价目表行（避免把 "$49.99 / 月 500 计算单元" 误判成 "剩余 49.99 / 500"）
-    const cleanText = text
-      .split('\n')
-      .filter((line) => !/(?:\$|US\$|¥|€)\s*[\d.,]+|\/\s*(?:月|month|mo\b)|购买|立即订阅|Purchase|Subscribe/i.test(line))
+    // 1. 优先从精准的 <colab-paid-resources> 组件读取（实地巡检确认的真实 DOM）
+    const paidPanels = deepQuerySelectorAll<HTMLElement>(doc, 'colab-paid-resources');
+    const panelText = paidPanels
+      .map((el) => (el.innerText || el.textContent || '').trim())
+      .filter(Boolean)
       .join('\n');
 
-    // 1. 仅匹配明确带有「可用 / 剩余 / 余额 / Available / Balance」语义的计算单元，绝不误匹配套餐价目表
-    const balancePairMatch = cleanText.match(
-      /(?:可用|剩余|当前余额|余额|Available|Remaining|Balance)[^\n\d]{0,18}([\d.,]+)\s*(?:\/|of|共)\s*([\d.,]+)\s*(?:compute\s+units?|计算单元)?/i
-    );
-    if (balancePairMatch) {
-      const rem = parseNumberToken(balancePairMatch[1]);
-      const tot = parseNumberToken(balancePairMatch[2]);
-      if (rem !== undefined && tot !== undefined && tot > 0 && rem <= tot * 1.5) {
-        return {
-          benefitId: 'colab',
-          status: 'synced',
-          metrics: {
-            primaryText: `剩余 ${rem} / ${tot} 计算单元`,
-            secondaryText: 'Colab Compute Units 可用余额',
-            percent: Math.min(100, Math.max(0, Math.round(((tot - rem) / tot) * 100))),
-            remainingValue: rem,
-            totalValue: tot,
-            unit: '单元',
-          },
-        };
-      }
-    }
+    const targetText = panelText || text;
 
-    const balanceSingleMatch =
+    // 过滤掉套餐价目表行（避免把 "$49.99 / 月 500 计算单元" 误判成余量）
+    const cleanText = targetText
+      .split('\n')
+      .filter(
+        (line) =>
+          !/(?:\$|US\$|¥|€)\s*[\d.,]+|\/\s*(?:月|month|mo\b)|购买|立即订阅|Purchase|Subscribe/i.test(
+            line
+          )
+      )
+      .join('\n');
+
+    // 匹配 "可用：200.14个计算单元" 或 "Available: 200.14 compute units"
+    const exactAvailableMatch =
       cleanText.match(
-        /(?:可用计算单元|剩余计算单元|当前余额|Available\s+compute\s+units?|Remaining\s+compute\s+units?|Compute\s+units?\s+available)\s*[:：]?\s*([\d.,]+)/i
+        /(?:可用|剩余|当前余额|余额|Available|Remaining)\s*[:：]?\s*([\d.,]+)\s*个?\s*(?:计算单元|compute\s+units?)/i
       ) ||
-      (!isSignupPage
-        ? cleanText.match(/([\d.,]+)\s*(?:compute\s+units?|计算单元)\s*(?:available|remaining|可用|剩余)/i)
-        : null);
+      cleanText.match(
+        /([\d.,]+)\s*个?\s*(?:计算单元|compute\s+units?)\s*(?:可用|剩余|available|remaining)/i
+      );
 
-    if (balanceSingleMatch) {
-      const rem = parseNumberToken(balanceSingleMatch[1]);
+    if (exactAvailableMatch) {
+      const rem = parseNumberToken(exactAvailableMatch[1]);
       if (rem !== undefined) {
+        const tierMatch = cleanText.match(/您已订阅[“"]([^”"]+)[”"]|subscribed\s+to\s+([^\n.]+)/i);
+        const tierName = tierMatch?.[1] || tierMatch?.[2] || 'Colab Pro';
+        const burnMatch = cleanText.match(/(?:使用率|Usage\s+rate)\s*[:：]\s*([^\n]{2,28})/i);
+        const sessionMatch = cleanText.match(/(?:您有\s*\d+\s*个有效会话|You\s+have\s+\d+\s+active\s+sessions?)/i);
+
+        // Colab Pro 基准 200 单元，Pro+ 基准 500 单元（若余量超过基准则按 0% 已用显示）
+        const baseQuota = /Pro\+/i.test(tierName) ? 500 : 200;
+        const usedPercent =
+          rem >= baseQuota
+            ? 0
+            : Math.min(100, Math.max(0, Math.round(((baseQuota - rem) / baseQuota) * 100)));
+
+        const secondaryParts = [
+          `已订阅 ${tierName}`,
+          burnMatch ? `使用率：${burnMatch[1].trim()}` : '',
+          sessionMatch ? sessionMatch[0].trim() : '',
+        ].filter(Boolean);
+
         return {
           benefitId: 'colab',
           status: 'synced',
           metrics: {
-            primaryText: `剩余 ${rem} 计算单元`,
-            secondaryText: '来自 Google Colab 资源面板',
+            primaryText: `可用：${rem} 个计算单元`,
+            secondaryText: secondaryParts.join(' · '),
+            percent: usedPercent,
             remainingValue: rem,
+            totalValue: baseQuota,
             unit: '单元',
           },
         };
       }
-    }
-
-    // 2. 识别当前已激活的 Colab 付费会员状态（例如笔记本底部栏的 "Colab 付费产品" / "Colab Pro"）
-    const activeTierMatch =
-      cleanText.match(/(?:当前方案|已订阅|Current\s+plan|Active)[\s\S]{0,40}?(Colab\s+Pro\+|Colab\s+Pro)/i) ||
-      cleanText.match(/(Colab\s*付费产品|Colab\s+Paid\s+Services)/i);
-    if (activeTierMatch) {
-      return {
-        benefitId: 'colab',
-        status: 'synced',
-        metrics: {
-          primaryText: `Colab 付费会员已激活（含 Pro 计算单元）`,
-          secondaryText: '点右上角「直达」进入笔记本 → 「RAM/磁盘 → 查看资源」可自动同步精确计算单元数',
-        },
-      };
     }
 
     return {
       benefitId: 'colab',
       status: 'fallback',
       metrics: {},
-      message: 'Colab 介绍页不直接显示个人余额，打开任意笔记本点右上角「查看资源」会自动顺路同步',
+      message: '未展开 Colab 资源面板，点击「刷新」或打开 Colab → 右上角「其他连接选项 → 查看资源」自动同步',
     };
   },
 };

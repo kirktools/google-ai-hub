@@ -26,7 +26,20 @@ export function NotebookLmCard(props: PlatformCardProps) {
       </div>
 
       {typeof record.metrics.percent === 'number' && (
-        <UsageBar label="配额占比" percent={record.metrics.percent} />
+        <UsageBar
+          label={record.source === 'manual' ? '手动记录占比' : '当前 AI 用量已用（每日重置）'}
+          percent={record.metrics.percent}
+        />
+      )}
+
+      {typeof record.metrics.secondaryPercent === 'number' && (
+        <UsageBar label="每周限额已用" percent={record.metrics.secondaryPercent} />
+      )}
+
+      {record.metrics.resetInfo && (
+        <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+          {record.metrics.resetInfo}
+        </p>
       )}
     </CardShell>
   );

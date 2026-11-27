@@ -220,12 +220,14 @@ export const googleOneParser: SiteParser = {
       }
     }
 
-    // 4. 解析续费/重置日期
+    // 4. 解析续费/重置日期（若无明确续费日，兼容「自 2026年11月26日起成为会员」推算每月账单日）
     let resetDateText: string | undefined;
     let resetDay: number | null = null;
-    const resetMatch = text.match(
-      /(?:renews?(?:\s+on)?|resets?(?:\s+on)?|next\s+billing\s+date|续费日期|下次续费|重置日期|将于)[^\n]{0,28}/i
-    );
+    const resetMatch =
+      text.match(
+        /(?:renews?(?:\s+on)?|resets?(?:\s+on)?|next\s+billing\s+date|续费日期|下次续费|重置日期|将于)[^\n]{0,28}/i
+      ) ||
+      text.match(/(?:自\s*\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日(?:起)?成为会员|Member\s+since[^\n]{4,24})/i);
     if (resetMatch) {
       const snippet = resetMatch[0].trim();
       const day = extractDayOfMonth(snippet);

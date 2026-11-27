@@ -305,7 +305,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
       },
       colab: {
         included: true,
-        defaultSummary: '每月含 Colab Pro 计算单元（约 100 单元）',
+        defaultSummary: '每月含 Colab Pro 计算单元（约 200 单元）',
         defaultSecondary: '以 Colab 资源页显示余量为准',
         monthlyReset: true,
       },
