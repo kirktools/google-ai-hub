@@ -135,10 +135,17 @@ export const flowParser: SiteParser = {
       return buildUnauthenticatedResult('flow');
     }
 
-    // 1. 优先解析 Google One「Google Flow 活动记录」详细页（one.google.com/ai/activity）
+    // 1. 优先解析 Google One「Google Flow 活动记录」详细页（one.google.com/ai/activity?utm_source=flow...）
     if (url.toLowerCase().includes('one.google.com')) {
       const activityResult = parseGoogleOneFlowActivity(text);
       if (activityResult) return activityResult;
+      // 防止没有 utm_source=flow 时把「AI 点数 0」误当成 Flow 点数
+      return {
+        benefitId: 'flow',
+        status: 'fallback',
+        metrics: {},
+        message: '当前打开的是通用 AI 点数页，未包含 Flow 明细，请点「刷新」重新同步',
+      };
     }
 
     // 2. 兼容 flow.google.com 头像浮层解析

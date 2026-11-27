@@ -80,7 +80,8 @@ export const BENEFIT_CATALOG: Record<BenefitId, BenefitCatalogItem> = {
     id: 'flow',
     title: 'Google Flow',
     subtitle: 'Veo 视频/图片/音乐月度点数、每日赠送点数与 AI 点数',
-    baseUrl: 'https://one.google.com/ai/activity',
+    baseUrl:
+      'https://one.google.com/ai/activity?utm_source=flow&utm_medium=web&utm_campaign=flow_ai_credits_page',
     accountUrlStrategy: 'u_path',
     syncable: true,
     inQuickSyncQueue: true,

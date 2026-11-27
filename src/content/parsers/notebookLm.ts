@@ -35,11 +35,24 @@ export const notebookLmParser: SiteParser = {
       /NotebookLM\s+(?:Plus|Pro)|\bPRO\b|\bPLUS\b/i.test(text) ||
       /(?:^|\n)\s*(?:Plus|Pro)\s*(?:\n|$)/i.test(text);
 
-    // 1. 先从文字中找明确笔记本计数
-    const countMatch =
-      text.match(/(\d+)\s*(?:notebooks?|个笔记本)/i) ||
-      text.match(/(?:我的笔记本|My\s+notebooks?|所有笔记本|All\s+notebooks?)[^\n\d]{0,12}(\d+)/i);
-    let count = parseNumberToken(countMatch?.[1]);
+    // 1. 先尝试从「最近打开过的笔记本 / 我的笔记本」分区统计用户自己的笔记本（排除精选推荐笔记本）
+    let count: number | undefined;
+    const recentSection = text.match(
+      /(?:最近打开过的笔记本|我的笔记本|Recent\s+notebooks?|My\s+notebooks?)[\s\S]*/i
+    )?.[0];
+    if (recentSection) {
+      const sourceMatches = recentSection.match(/\d+\s*(?:个来源|sources?)/gi);
+      if (sourceMatches) {
+        count = sourceMatches.length;
+      }
+    }
+
+    if (count === undefined) {
+      const countMatch =
+        text.match(/(\d+)\s*(?:notebooks?|个笔记本)/i) ||
+        text.match(/(?:我的笔记本|My\s+notebooks?|所有笔记本|All\s+notebooks?)[^\n\d]{0,12}(\d+)/i);
+      count = parseNumberToken(countMatch?.[1]);
+    }
 
     // 2. 穿透 Shadow DOM 统计页面中已渲染的笔记本卡片（排除「新建笔记本」按钮）
     if (count === undefined) {
