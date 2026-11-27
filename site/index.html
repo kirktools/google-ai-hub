@@ -49,6 +49,20 @@
           <p class="meta">
             支持 Chrome / Edge / Arc / Brave · 简体中文界面 · 零第三方数据上传 · MIT 协议
           </p>
+
+          <div class="ai-prompt-box">
+            <div class="ai-prompt-head">
+              <span>发给 AI 助手一键安装（Antigravity / Claude Code / Cursor / Codex）</span>
+              <button
+                type="button"
+                class="copy-btn"
+                onclick="navigator.clipboard.writeText(document.getElementById('ai-install-prompt').textContent.trim()).then(() => { this.textContent = '已复制 ✓'; setTimeout(() => { this.textContent = '复制指令'; }, 2000); })"
+              >
+                复制指令
+              </button>
+            </div>
+            <pre id="ai-install-prompt" class="ai-prompt-code">请帮我下载 https://github.com/kirktools/google-ai-hub/releases/latest/download/google-ai-hub-chrome.zip 并解压到本地一个固定目录，然后告诉我如何在 Chrome 中加载这个扩展。</pre>
+          </div>
         </div>
 
         <div class="demo-panel" aria-label="Google AI Hub 看板示例">
@@ -167,12 +181,7 @@
     <section id="install" class="section">
       <div class="container">
         <h2>快速安装与加载</h2>
-        <p class="section-desc">优先直接下载预构建压缩包（无需 Node.js 环境），也可让 AI 助手一句指令代劳解压。</p>
-        <div class="card" style="margin-bottom: 16px;">
-          <h3>发给 AI 助手一键安装（Antigravity / Claude Code / Cursor / Codex）</h3>
-          <p>直接复制下方指令发给你的 AI 助手，自动下载预构建 ZIP 并解压，无需拉取源码或安装 Node：</p>
-          <pre class="code-block">请帮我下载 https://github.com/kirktools/google-ai-hub/releases/latest/download/google-ai-hub-chrome.zip 并解压到本地一个固定目录，然后告诉我如何在 Chrome 中加载这个扩展。</pre>
-        </div>
+        <p class="section-desc">优先使用顶部「AI 助手一键安装」或直接下载预构建 ZIP（无需 Node.js 环境）。</p>
         <div class="steps">
           <div class="card">
             <span class="step-num">1</span>
