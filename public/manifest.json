@@ -39,7 +39,8 @@
     "https://colab.research.google.com/*",
     "https://gemini.google.com/*",
     "https://notebooklm.google.com/*",
-    "https://notebook.google.com/*"
+    "https://notebook.google.com/*",
+    "https://antigravity.google.com/*"
   ],
   "content_scripts": [
     {
@@ -53,7 +54,8 @@
         "https://colab.research.google.com/*",
         "https://gemini.google.com/*",
         "https://notebooklm.google.com/*",
-        "https://notebook.google.com/*"
+        "https://notebook.google.com/*",
+        "https://antigravity.google.com/*"
       ],
       "js": [
         "content.js"

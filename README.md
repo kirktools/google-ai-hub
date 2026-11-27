@@ -40,7 +40,7 @@
   4. **Google Colab**：自动读取剩余 GPU / TPU 计算单元（Compute Units）与消耗占比
   5. **Gemini 网页版**：5 小时滚动窗口 + 每周限额双进度条与精确重置时间
   6. **NotebookLM（Gemini Notebook）**：当前 + 每周 AI 用量双进度条、重置时间与个人笔记本数
-  7. **Google Antigravity**：桌面端编码额度卡片（标注 5 小时滚动刷新机制，支持手动记录）
+  7. **Google Antigravity**：自动读取 Gemini & Claude/GPT 模型的 5 小时滚动窗口与每周剩余额度及恢复倒计时
   8. **生态附加福利（折叠区）**：Workspace AI、YouTube Premium、家庭组共享等
 - **月度防浪费提醒**：距离账单/额度重置日 ≤ 5 天时，在面板顶部柔和提醒检查当月可消耗额度。
 - **浅色 / 深色主题 & 本地备份**：支持跟随系统/手动切换主题、JSON 导出/导入备份、一键清空缓存。
@@ -118,7 +118,7 @@ pnpm release current
 | `storage` | 在本地 `chrome.storage.local` 保存权益缓存与主题/排序偏好 | 不使用云端同步，不上传数据 |
 | `tabs` | 一键同步时复用单个后台标签页并在读取后立即关闭；点击卡片打开官网 | 不读取你其他无关标签页的内容或浏览历史 |
 | `alarms` | 支持设置低频定时自动同步（最低 1 小时，可随时关闭） | 禁止高频轮询，不耗电不触发风控 |
-| `host_permissions`（仅 10 个官方 Google 域名/路径） | 仅在 `one.google.com`、`aistudio.google.com`、`me.developers.google.com`、`console.cloud.google.com/billing*`、`flow.google.com`、`labs.google`、`colab.research.google.com`、`gemini.google.com`、`notebooklm.google.com`、`notebook.google.com` 上运行可见文本解析 | **不申请 `<all_urls>`**，不触碰 Gmail、Drive、银行或任何其他网站 |
+| `host_permissions`（仅 11 个官方 Google 域名/路径） | 仅在 `one.google.com`、`aistudio.google.com`、`me.developers.google.com`、`console.cloud.google.com/billing*`、`flow.google.com`、`labs.google`、`colab.research.google.com`、`gemini.google.com`、`notebooklm.google.com`、`notebook.google.com`、`antigravity.google.com` 上运行可见文本解析 | **不申请 `<all_urls>`**，不触碰 Gmail、Drive、银行或任何其他网站 |
 
 ---
 

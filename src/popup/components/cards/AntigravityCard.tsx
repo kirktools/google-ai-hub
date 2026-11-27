@@ -3,8 +3,22 @@ import { CardShell } from './CardShell';
 import { UsageBar } from './UsageBar';
 import type { PlatformCardProps } from './types';
 
+function formatAntigravityReset(raw: string): string {
+  return raw
+    .replace(/5h\s*窗口\s*/g, '5h 重置：')
+    .replace(/每周限额\s*/g, '每周重置：')
+    .replace(/\s*后恢复/g, '后')
+    .replace(/\b(\d+)\s*days?\b/gi, '$1 天')
+    .replace(/\b(\d+)\s*hours?\b/gi, '$1 小时')
+    .replace(/\b(\d+)\s*minutes?\b/gi, '$1 分')
+    .replace(/\b(\d+)\s*seconds?\b/gi, '$1 秒')
+    .replace(/\s*,\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function AntigravityCard(props: PlatformCardProps) {
-  const { catalog, planMeta, record } = props;
+  const { planMeta, record } = props;
   const primaryText = record.metrics.primaryText || planMeta.defaultSummary;
   const secondaryText = record.metrics.secondaryText || planMeta.defaultSecondary;
 
@@ -26,12 +40,16 @@ export function AntigravityCard(props: PlatformCardProps) {
       </div>
 
       {typeof record.metrics.percent === 'number' && (
-        <UsageBar label="当前 5 小时窗口已用" percent={record.metrics.percent} />
+        <UsageBar label="Gemini 5 小时窗口已用" percent={record.metrics.percent} />
       )}
 
-      {catalog.helperTip && !record.metrics.note && (
-        <p className="rounded-md bg-violet-50/70 px-2 py-1 text-[11px] text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-          {catalog.helperTip}
+      {typeof record.metrics.secondaryPercent === 'number' && (
+        <UsageBar label="Gemini 每周限额已用" percent={record.metrics.secondaryPercent} />
+      )}
+
+      {record.metrics.resetInfo && (
+        <p className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+          {formatAntigravityReset(record.metrics.resetInfo)}
         </p>
       )}
     </CardShell>

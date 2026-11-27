@@ -123,7 +123,7 @@ async function requestExtractionFromTab(
 }
 
 /** 仅按白名单域名查询已打开的同平台标签页（绝不枚举其他无关网站标签页） */
-const SYNC_URL_PATTERNS: Record<SyncableBenefitId, string[]> = {
+const SYNC_URL_PATTERNS: Record<Exclude<SyncableBenefitId, 'antigravity'>, string[]> = {
   google_one: ['https://one.google.com/*'],
   ai_studio: [
     'https://console.cloud.google.com/billing*',
@@ -139,6 +139,9 @@ const SYNC_URL_PATTERNS: Record<SyncableBenefitId, string[]> = {
 async function tryExtractFromExistingTab(
   benefitId: SyncableBenefitId
 ): Promise<ParsedSiteResult | null> {
+  // 已打开的 Antigravity 面板可能仍是旧快照，刷新时重新加载用量入口。
+  if (benefitId === 'antigravity') return null;
+
   try {
     const tabs = await chrome.tabs.query({ url: SYNC_URL_PATTERNS[benefitId] });
     const matches = tabs.filter(
@@ -218,6 +221,15 @@ async function syncSiteInReusableTab(
     await sleep(800);
     let result = await requestExtractionFromTab(tabId, benefitId);
 
+    // Antigravity 的应用可能在浏览器报告加载完成后才挂载，给同一页面再一次提取机会。
+    if (
+      benefitId === 'antigravity' &&
+      result.status === 'fallback' &&
+      result.debugInfo?.reason === 'fallback_app_not_mounted'
+    ) {
+      result = await requestExtractionFromTab(tabId, benefitId);
+    }
+
     // 如果解析器返回了二级精准数据页（例如 Cloud /billing -> /billing/<ID>/credits/all），自动在同标签页跟进一次
     if (result.redirectUrl) {
       await chrome.tabs.update(tabId, { url: result.redirectUrl, active: false });
@@ -275,7 +287,7 @@ async function runSyncQueue(
         currentLabel: `正在同步 ${i + 1}/${targets.length}：${meta.title}`,
       });
 
-      // 1. 优先复用已打开的同平台标签页（零新建、零闪烁）
+      // 1. 优先复用已打开的同平台标签页
       const existingResult = await tryExtractFromExistingTab(targetId);
       if (existingResult) {
         await applyParsedSiteResult(existingResult);

@@ -83,7 +83,7 @@ export function Header({
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              上次同步：{formatRelativeTime(syncProgress.lastSyncedAt)}
+              最近刷新尝试：{formatRelativeTime(syncProgress.lastSyncedAt)}
             </p>
           </div>
         </div>

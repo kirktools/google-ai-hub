@@ -51,6 +51,8 @@ export function CardShell({
   children,
 }: CardShellProps) {
   const isUnauth = record.status === 'unauthenticated';
+  const refreshFailed = record.status === 'fallback';
+  const showingCachedMetrics = refreshFailed && record.source === 'auto';
 
   const sourceBadge = isUnauth
     ? {
@@ -62,15 +64,20 @@ export function CardShell({
           text: '手动校准',
           cls: 'bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300',
         }
-      : record.source === 'auto' && record.status === 'synced'
+      : refreshFailed
         ? {
-            text: '已同步',
-            cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300',
+            text: showingCachedMetrics ? '刷新失败 · 缓存' : '刷新失败',
+            cls: 'bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300',
           }
-        : {
-            text: '套餐参考',
-            cls: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-          };
+        : record.source === 'auto' && record.status === 'synced'
+          ? {
+              text: '已同步',
+              cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300',
+            }
+          : {
+              text: '套餐参考',
+              cls: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+            };
 
   return (
     <article className="group rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm transition hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-900">
@@ -141,6 +148,12 @@ export function CardShell({
           ) : (
             <>
               {children}
+              {refreshFailed && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  {showingCachedMetrics && '本次未能更新，当前为上次同步结果。'}
+                  {record.message || '请稍后重试。'}
+                </p>
+              )}
               {record.metrics.note && (
                 <p className="rounded-md bg-slate-50 px-2 py-1 text-[11px] text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
                   备注：{record.metrics.note}
@@ -151,7 +164,7 @@ export function CardShell({
 
           <div className="flex items-center justify-between pt-1">
             <span className="text-[10px] text-slate-400 dark:text-slate-500">
-              更新：{formatRelativeTime(record.updatedAt)}
+              {showingCachedMetrics ? '上次更新' : '更新'}：{formatRelativeTime(record.updatedAt)}
             </span>
 
             <div className="flex items-center gap-1">

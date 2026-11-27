@@ -16,7 +16,8 @@ export type SyncableBenefitId =
   | 'flow'
   | 'colab'
   | 'gemini'
-  | 'notebooklm';
+  | 'notebooklm'
+  | 'antigravity';
 
 export type DataSource = 'auto' | 'manual' | 'default';
 

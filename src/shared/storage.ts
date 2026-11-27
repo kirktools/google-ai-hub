@@ -95,12 +95,21 @@ export function normalizeState(raw: unknown): HubStorageState {
           rawDebug && typeof rawDebug.host === 'string' && typeof rawDebug.reason === 'string'
             ? { host: rawDebug.host, reason: rawDebug.reason }
             : undefined;
+        const stored = data.benefits[id];
+        // 旧版本在刷新失败后仍沿用缓存的 synced 状态。
+        const wasFailedRefresh =
+          stored.status === 'synced' &&
+          cleanDebug &&
+          (cleanDebug.reason === 'fallback' ||
+            cleanDebug.reason.startsWith('fallback_') ||
+            cleanDebug.reason === 'content_script_unresponsive');
         mergedBenefits[id] = {
           ...base.benefits[id],
-          ...data.benefits[id],
+          ...stored,
           id,
+          status: wasFailedRefresh ? 'fallback' : (stored.status ?? base.benefits[id].status),
           debugInfo: cleanDebug,
-          metrics: { ...(data.benefits[id].metrics ?? {}) },
+          metrics: { ...(stored.metrics ?? {}) },
         };
       }
     }
@@ -155,26 +164,26 @@ export async function applyParsedSiteResult(
 
   // 如果本次只是低置信度 fallback，保留用户手动校准值，也保留上一次已成功同步的有效数值（防止偶发超时把好数据冲掉）
   const keepManual = parsed.status === 'fallback' && Boolean(prev.manualOverride);
-  const keepPreviousSynced =
+  const keepPreviousMetrics =
     parsed.status === 'fallback' &&
     !keepManual &&
-    prev.status === 'synced' &&
+    prev.source === 'auto' &&
+    (prev.status === 'synced' || prev.status === 'fallback') &&
     Boolean(prev.metrics.primaryText);
 
   state.benefits[parsed.benefitId] = {
     ...prev,
     id: parsed.benefitId,
-    status: keepPreviousSynced ? prev.status : parsed.status,
+    status: parsed.status,
     source: keepManual
       ? 'manual'
-      : keepPreviousSynced
-        ? prev.source
-        : parsed.status === 'synced'
-          ? 'auto'
-          : prev.source,
-    updatedAt: keepPreviousSynced ? prev.updatedAt : now,
-    metrics: keepManual || keepPreviousSynced ? prev.metrics : parsed.metrics,
-    message: keepPreviousSynced ? prev.message : parsed.message,
+      : parsed.status === 'synced' || keepPreviousMetrics
+        ? 'auto'
+        : 'default',
+    updatedAt:
+      keepManual || keepPreviousMetrics ? prev.updatedAt : parsed.status === 'fallback' ? null : now,
+    metrics: keepManual || keepPreviousMetrics ? prev.metrics : parsed.metrics,
+    message: parsed.message,
     debugInfo: parsed.debugInfo,
   };
 

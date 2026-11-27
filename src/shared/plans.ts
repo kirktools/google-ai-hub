@@ -124,14 +124,13 @@ export const BENEFIT_CATALOG: Record<BenefitId, BenefitCatalogItem> = {
   antigravity: {
     id: 'antigravity',
     title: 'Google Antigravity',
-    subtitle: '桌面端 AI 编码代理额度（5 小时滚动窗口刷新）',
-    baseUrl: 'https://one.google.com/about/google-ai-plans/',
+    subtitle: 'AI 编码代理额度（Gemini & Claude/GPT 5 小时 + 每周限额）',
+    baseUrl: 'https://antigravity.google.com/remote?settingsOpen=true&settingsScreen=Models',
     accountUrlStrategy: 'none',
-    syncable: false,
-    inQuickSyncQueue: false,
+    syncable: true,
+    inQuickSyncQueue: true,
     syncPriority: 7,
-    openLabel: '查看套餐说明',
-    helperTip: 'Antigravity 额度在桌面端按 5 小时滚动窗口动态刷新，可点击校准记录当前余量或下次恢复时间。',
+    openLabel: '打开用量页',
   },
   ecosystem: {
     id: 'ecosystem',
@@ -164,6 +163,7 @@ export const QUICK_SYNC_QUEUE: SyncableBenefitId[] = [
   'flow',
   'colab',
   'notebooklm',
+  'antigravity',
 ];
 
 export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {

@@ -92,6 +92,7 @@ export function detectBenefitIdFromUrl(urlStr: string): BenefitId | null {
     if (host === 'colab.research.google.com') return 'colab';
     if (host === 'gemini.google.com') return 'gemini';
     if (host === 'notebooklm.google.com' || host === 'notebook.google.com') return 'notebooklm';
+    if (host === 'antigravity.google.com') return 'antigravity';
     return null;
   } catch {
     return null;

@@ -1,6 +1,7 @@
 import type { ParsedSiteResult, RuntimeMessage, RuntimeResponse, SyncableBenefitId } from '../shared/types';
 import { detectBenefitIdFromUrl } from '../shared/utils';
 import { aiStudioParser } from './parsers/aiStudio';
+import { antigravityParser } from './parsers/antigravity';
 import { colabParser } from './parsers/colab';
 import { flowParser } from './parsers/flow';
 import { geminiParser } from './parsers/gemini';
@@ -16,6 +17,7 @@ const PARSER_MAP: Record<SyncableBenefitId, SiteParser> = {
   colab: colabParser,
   gemini: geminiParser,
   notebooklm: notebookLmParser,
+  antigravity: antigravityParser,
 };
 
 function sleep(ms: number): Promise<void> {
@@ -82,9 +84,11 @@ chrome.runtime.onMessage.addListener(
       return undefined;
     }
 
-    const activeWaitMs = window.location.hostname.includes('console.cloud.google.com')
-      ? 14500
-      : 8500;
+    const activeWaitMs =
+      window.location.hostname.includes('console.cloud.google.com') ||
+      window.location.hostname.includes('antigravity.google.com')
+        ? 14500
+        : 8500;
 
     waitAndParse(parser, activeWaitMs, true)
       .then((result) => {
@@ -92,7 +96,8 @@ chrome.runtime.onMessage.addListener(
           ok: true,
           data: {
             ...result,
-            debugInfo: buildSanitizedDebugInfo(window.location.href, result.status),
+            debugInfo:
+              result.debugInfo ?? buildSanitizedDebugInfo(window.location.href, result.status),
           },
         });
       })
