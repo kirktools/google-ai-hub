@@ -92,7 +92,7 @@ chrome.runtime.onMessage.addListener(
           ok: true,
           data: {
             ...result,
-            debugInfo: buildSanitizedDebugInfo(document, window.location.href),
+            debugInfo: buildSanitizedDebugInfo(window.location.href, result.status),
           },
         });
       })

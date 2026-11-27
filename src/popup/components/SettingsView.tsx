@@ -51,7 +51,7 @@ export function SettingsView({
       a.download = `google-ai-hub-backup-${today}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showNotice('ok', '已导出本地 JSON 备份（不含任何账号密码或 Cookie）');
+      showNotice('ok', '已导出本地 JSON 备份（不含凭据与账号信息；含你手动填写的个人备注）');
     } catch {
       showNotice('err', '导出备份失败');
     }
@@ -90,11 +90,11 @@ export function SettingsView({
         .map((b) => ({
           id: b.id,
           status: b.status,
-          url: b.debugInfo?.url,
-          snippet: b.debugInfo?.textSnippet,
+          host: b.debugInfo?.host,
+          reason: b.debugInfo?.reason,
         }));
       await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-      showNotice('ok', '已复制脱敏诊断摘要（已自动隐藏邮箱），可直接发给开发者校准解析规则');
+      showNotice('ok', '已复制安全诊断状态（仅含站点域名与状态码，不含页面文本或个人信息）');
     } catch {
       showNotice('err', '复制诊断信息失败');
     }

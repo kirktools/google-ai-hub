@@ -36,7 +36,7 @@ const versionedZipPath = resolve(releaseDir, versionedZip);
 const fixedZipPath = resolve(releaseDir, fixedZip);
 
 console.log(`==> 打包扩展压缩包: release/${versionedZip}`);
-execSync(`zip -r -q "${versionedZipPath}" .`, {
+execSync(`zip -r -X -q "${versionedZipPath}" .`, {
   cwd: resolve(rootDir, 'dist'),
   stdio: 'inherit',
 });

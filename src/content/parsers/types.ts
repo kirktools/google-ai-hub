@@ -83,25 +83,18 @@ export function getVisibleText(doc: Document): string {
     .trim();
 }
 
-/** 生成脱敏后的页面诊断摘要（隐藏邮箱等敏感信息） */
-export function buildSanitizedDebugInfo(doc: Document, url: string): {
-  url: string;
-  textSnippet: string;
+/** 生成严格脱敏的诊断信息（仅保留主机名与状态类别，绝不采集页面正文、标题或账单 ID） */
+export function buildSanitizedDebugInfo(url: string, reason: string): {
+  host: string;
+  reason: string;
 } {
-  const full = getVisibleText(doc).replace(
-    /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
-    '***@***'
-  );
-  // 若全文较长，同时保留头部与尾部，避免侧边栏占满摘要看不到主内容
-  const text =
-    full.length <= 700
-      ? full
-      : `${full.slice(0, 320)}\n...\n${full.slice(-360)}`;
-  const safeUrl = url.replace(/([?&](?:token|key|sid|auth)=)[^&]+/gi, '$1***');
-  return {
-    url: safeUrl,
-    textSnippet: text,
-  };
+  let host = 'unknown';
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    host = 'invalid-url';
+  }
+  return { host, reason };
 }
 
 /** 通用未登录状态检测（兼容中英文 Google 登录页与登录按钮） */
@@ -190,18 +183,27 @@ export function extractDayOfMonth(dateText: string): number | null {
   return null;
 }
 
-/** 提取当前页面已登录 Google 账号的展示名称（仅用于本地确认未读错号） */
+/** 遮盖邮箱中间字符（例如 a***@gmail.com） */
+function maskEmailInLabel(raw: string): string {
+  return raw.replace(
+    /\b([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*(@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g,
+    '$1***$2'
+  );
+}
+
+/** 提取当前页面已登录 Google 账号的脱敏展示名称（仅用于本地确认登录态） */
 export function extractGoogleAccountLabel(doc: Document): string | undefined {
   const el = doc.querySelector<HTMLElement>(
     'a[aria-label*="Google Account"], a[aria-label*="Google 账号"], a[aria-label*="Google 帐号"], button[aria-label*="Google Account"], button[aria-label*="Google 账号"], button[aria-label*="Google 帐号"]'
   );
   const rawLabel = el?.getAttribute('aria-label') || '';
   if (rawLabel) {
-    // 格式通常为 "Google Account: Name (email@gmail.com)" 或 "Google 账号：Name\n(email@gmail.com)"
-    const cleaned = rawLabel
-      .replace(/^Google\s*(?:Account|账号|帐号)\s*[:：]\s*/i, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const cleaned = maskEmailInLabel(
+      rawLabel
+        .replace(/^Google\s*(?:Account|账号|帐号)\s*[:：]\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
     if (cleaned.length > 0 && cleaned.length <= 80) {
       return cleaned;
     }

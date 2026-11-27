@@ -87,10 +87,19 @@ export function normalizeState(raw: unknown): HubStorageState {
   if (data.benefits && typeof data.benefits === 'object') {
     for (const id of DEFAULT_CARD_ORDER) {
       if (data.benefits[id]) {
+        const rawDebug = data.benefits[id].debugInfo as
+          | { host?: string; reason?: string; textSnippet?: string }
+          | undefined;
+        // 清理旧版本缓存中可能残留的页面正文片段
+        const cleanDebug =
+          rawDebug && typeof rawDebug.host === 'string' && typeof rawDebug.reason === 'string'
+            ? { host: rawDebug.host, reason: rawDebug.reason }
+            : undefined;
         mergedBenefits[id] = {
           ...base.benefits[id],
           ...data.benefits[id],
           id,
+          debugInfo: cleanDebug,
           metrics: { ...(data.benefits[id].metrics ?? {}) },
         };
       }

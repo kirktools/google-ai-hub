@@ -60,10 +60,10 @@ export interface BenefitRecord {
   metrics: BenefitMetrics;
   /** 检测到未登录或其他提示信息 */
   message?: string;
-  /** 仅用于本地排查解析规则的脱敏快照（实际访问 URL 与前段文本，导出备份时自动移除） */
+  /** 仅用于本地排查的脱敏诊断摘要（只含站点域名与错误类别，绝不存页面正文或账号 ID） */
   debugInfo?: {
-    url: string;
-    textSnippet: string;
+    host: string;
+    reason: string;
   };
   /** 当用户手动校准过，保留手动数据不被低置信度 fallback 覆盖 */
   manualOverride?: BenefitMetrics | null;
@@ -129,10 +129,10 @@ export interface ParsedSiteResult {
   message?: string;
   /** 从 Google 账号头像/侧边栏提取的当前登录账号名称（仅本地展示，不外发、不导出） */
   accountLabel?: string;
-  /** 脱敏后的页面 URL 与文本摘要，方便排查解析规则 */
+  /** 脱敏后的站点域名与状态类别（绝不含页面正文、用户名或账单 ID） */
   debugInfo?: {
-    url: string;
-    textSnippet: string;
+    host: string;
+    reason: string;
   };
   /** 如果需要进一步跳转到二级真实数据页（例如 Cloud /billing -> /billing/<ID>/credits/all） */
   redirectUrl?: string;

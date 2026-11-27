@@ -137,12 +137,12 @@
             <tr>
               <td><code>storage</code></td>
               <td>将同步结果、手动校准与主题设置保存在本地 <code>chrome.storage.local</code></td>
-              <td>零外发网络请求，不上传任何服务器</td>
+              <td>无第三方遥测或数据上传，数据仅留在本机</td>
             </tr>
             <tr>
               <td><code>tabs</code></td>
-              <td>一键同步时复用单个后台非激活标签页并在提取完成后立即关闭</td>
-              <td>不读取其他无关标签页或浏览历史</td>
+              <td>仅按白名单域名复用已开标签或使用单个后台标签访问 Google 官方页面并立即关闭</td>
+              <td>不枚举或读取其他无关标签页与浏览历史</td>
             </tr>
             <tr>
               <td><code>alarms</code></td>

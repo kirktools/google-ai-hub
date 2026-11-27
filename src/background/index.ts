@@ -102,10 +102,10 @@ async function requestExtractionFromTab(
     await sleep(900);
   }
 
-  let finalUrl = '';
+  let finalHost = 'unknown';
   try {
     const tab = await chrome.tabs.get(tabId);
-    finalUrl = tab.url || '';
+    if (tab.url) finalHost = new URL(tab.url).hostname;
   } catch {
     // ignore
   }
@@ -115,19 +115,32 @@ async function requestExtractionFromTab(
     status: 'fallback',
     metrics: {},
     debugInfo: {
-      url: finalUrl,
-      textSnippet: 'Content script 未响应（可能页面跳转到了未放行域名或加载超时）',
+      host: finalHost,
+      reason: 'content_script_unresponsive',
     },
     message: '未能从后台标签页读取到内容，可点击直达官网查看',
   };
 }
 
-/** 优先尝试复用用户当前已经打开的同站点标签页（零闪烁，不新建标签） */
+/** 仅按白名单域名查询已打开的同平台标签页（绝不枚举其他无关网站标签页） */
+const SYNC_URL_PATTERNS: Record<SyncableBenefitId, string[]> = {
+  google_one: ['https://one.google.com/*'],
+  ai_studio: [
+    'https://console.cloud.google.com/billing*',
+    'https://me.developers.google.com/*',
+    'https://aistudio.google.com/*',
+  ],
+  flow: ['https://one.google.com/*ai/activity*', 'https://flow.google.com/*', 'https://labs.google/*'],
+  colab: ['https://colab.research.google.com/*'],
+  gemini: ['https://gemini.google.com/*'],
+  notebooklm: ['https://notebook.google.com/*', 'https://notebooklm.google.com/*'],
+};
+
 async function tryExtractFromExistingTab(
   benefitId: SyncableBenefitId
 ): Promise<ParsedSiteResult | null> {
   try {
-    const tabs = await chrome.tabs.query({});
+    const tabs = await chrome.tabs.query({ url: SYNC_URL_PATTERNS[benefitId] });
     const matches = tabs.filter(
       (t) => t.id !== undefined && t.url && detectBenefitIdFromUrl(t.url) === benefitId
     );
