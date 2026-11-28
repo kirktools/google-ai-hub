@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpCircle, BellRing, Download, ExternalLink, X } from 'lucide-react';
+import { ArrowUpCircle, BellRing, Copy, Download, ExternalLink, X } from 'lucide-react';
 import { BENEFIT_CATALOG, PLAN_DEFINITIONS } from '../shared/plans';
 import {
+  buildAiUpdatePrompt,
   checkForUpdate,
   dismissUpdateNotice,
   type UpdateCheckResult,
@@ -302,7 +303,7 @@ export function App() {
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <div className="mt-2 flex items-center gap-2 pl-6">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
                   <button
                     type="button"
                     onClick={() => void chrome.tabs.create({ url: updateInfo.downloadUrl })}
@@ -310,6 +311,21 @@ export function App() {
                   >
                     <Download className="h-3 w-3" />
                     下载新版 ZIP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(buildAiUpdatePrompt(updateInfo.downloadUrl))
+                        .then(() =>
+                          showToast('已复制 AI 更新指令，直接发给 AI 助手即可自动覆盖更新')
+                        )
+                        .catch(() => showToast('复制失败，请手动下载新版 ZIP'));
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/80 bg-white/80 px-2 py-1 text-[11px] font-medium text-emerald-800 transition hover:bg-white dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+                  >
+                    <Copy className="h-3 w-3" />
+                    AI 更新指令
                   </button>
                   <button
                     type="button"

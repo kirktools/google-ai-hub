@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import {
   ArrowUpCircle,
   Bug,
+  Copy,
   Download,
   ExternalLink,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   importBackupJson,
 } from '../../shared/storage';
 import {
+  buildAiUpdatePrompt,
   checkForUpdate,
   getCurrentExtensionVersion,
   RELEASES_PAGE_URL,
@@ -414,18 +416,34 @@ export function SettingsView({
         </div>
 
         {updateInfo?.hasUpdate && (
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50/80 px-2.5 py-2 text-[11px] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-            <span className="inline-flex items-center gap-1 font-medium">
+          <div className="space-y-2 rounded-lg bg-emerald-50/80 px-2.5 py-2 text-[11px] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <p className="flex items-center gap-1 font-medium">
               <ArrowUpCircle className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               v{updateInfo.latestVersion} 已发布，解压覆盖原目录后刷新扩展即可
-            </span>
-            <div className="flex shrink-0 items-center gap-1.5">
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => void chrome.tabs.create({ url: updateInfo.downloadUrl })}
-                className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-emerald-700"
+                className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-emerald-700"
               >
-                下载
+                <Download className="h-3 w-3" />
+                下载 ZIP
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(buildAiUpdatePrompt(updateInfo.downloadUrl))
+                    .then(() =>
+                      showNotice('ok', '已复制 AI 更新指令，直接发给 AI 助手即可自动覆盖更新')
+                    )
+                    .catch(() => showNotice('err', '复制 AI 更新指令失败'));
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-emerald-300/80 bg-white/80 px-2 py-1 text-[11px] font-medium text-emerald-800 hover:bg-white dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+              >
+                <Copy className="h-3 w-3" />
+                复制 AI 更新指令
               </button>
               <button
                 type="button"
@@ -433,8 +451,9 @@ export function SettingsView({
                 onClick={() =>
                   void chrome.tabs.create({ url: updateInfo.releaseUrl || RELEASES_PAGE_URL })
                 }
-                className="rounded-md p-1 text-emerald-700 hover:bg-emerald-200/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+                className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300/80 bg-white/70 px-2 py-1 text-[11px] font-medium text-emerald-800 hover:bg-white dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
               >
+                更新说明
                 <ExternalLink className="h-3 w-3" />
               </button>
             </div>

@@ -5,6 +5,10 @@ export const LATEST_ZIP_URL =
 export const RELEASES_PAGE_URL =
   'https://github.com/kirktools/google-ai-hub/releases/latest';
 
+export function buildAiUpdatePrompt(downloadUrl = LATEST_ZIP_URL): string {
+  return `请帮我下载最新版 Google AI Hub 扩展 ${downloadUrl}，解压并覆盖我本地原有的 google-ai-hub 扩展目录（保持原目录路径不变以保留本地数据），然后帮我打开 Chrome 的 chrome://extensions/ 并刷新该扩展（若受浏览器安全限制无法自动点击，请指引我点一下刷新）。`;
+}
+
 const UPDATE_CACHE_KEY = 'google_ai_hub_update_check_v1';
 const UPDATE_CHECK_TTL_MS = 12 * 60 * 60 * 1000; // 12 小时缓存，避免频繁请求 GitHub API
 
