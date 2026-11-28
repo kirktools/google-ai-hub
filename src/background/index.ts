@@ -184,7 +184,8 @@ async function tryExtractFromExistingTab(
 /** 使用同一个可复用的后台标签页完成单个站点同步，避免反复打开关闭多个标签 */
 async function syncSiteInReusableTab(
   benefitId: SyncableBenefitId,
-  sharedTabId: number | undefined
+  sharedTabId: number | undefined,
+  allowPopupFallback = true
 ): Promise<{ result: ParsedSiteResult; tabId: number | undefined }> {
   const url = buildAccountUrl(benefitId);
   let tabId = sharedTabId;
@@ -220,8 +221,9 @@ async function syncSiteInReusableTab(
     let result = await requestExtractionFromTab(tabId, benefitId);
 
     // Antigravity 在非激活标签页中因 visibilityState=hidden 可能暂停 React 挂载；
-    // 遇到 fallback_app_not_mounted 时，改用不抢焦点的角落极小独立窗（visible 状态）完成一次提取，立即把焦点还给原窗口并在读完后关闭。
+    // 仅在用户主动触发同步时，遇到 fallback_app_not_mounted 改用不抢焦点的角落极小独立窗完成提取，避免定时后台同步打扰用户。
     if (
+      allowPopupFallback &&
       benefitId === 'antigravity' &&
       result.status === 'fallback' &&
       result.debugInfo?.reason === 'fallback_app_not_mounted'
@@ -290,7 +292,8 @@ async function syncSiteInReusableTab(
 
 async function runSyncQueue(
   targets: SyncableBenefitId[],
-  mode: 'all' | 'single'
+  mode: 'all' | 'single',
+  trigger: 'manual' | 'auto' = 'manual'
 ): Promise<void> {
   if (isSyncLocked) return;
   isSyncLocked = true;
@@ -329,7 +332,11 @@ async function runSyncQueue(
         await applyParsedSiteResult(existingResult);
       } else {
         // 2. 否则复用唯一一个后台标签页顺序跳转，避免标签栏反复开合
-        const { result, tabId } = await syncSiteInReusableTab(targetId, reusableTabId);
+        const { result, tabId } = await syncSiteInReusableTab(
+          targetId,
+          reusableTabId,
+          trigger === 'manual'
+        );
         reusableTabId = tabId;
         await applyParsedSiteResult(result);
       }
@@ -348,8 +355,11 @@ async function runSyncQueue(
       currentTargetId: null,
       currentLabel: '同步完成',
       lastSyncedAt: finishedAt,
+      // 仅用户手动点击「一键同步」才进入冷却；定时后台自动同步不锁死手动按钮
       lastCooldownUntil:
-        mode === 'all' ? finishedAt + SYNC_COOLDOWN_MS : state.syncProgress.lastCooldownUntil,
+        mode === 'all' && trigger === 'manual'
+          ? finishedAt + SYNC_COOLDOWN_MS
+          : state.syncProgress.lastCooldownUntil,
       lastError: undefined,
     });
   } catch (err) {
@@ -434,7 +444,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   void loadState().then((state) => {
     if (isSyncLocked || state.syncProgress.running) return;
     if (state.settings.autoSyncIntervalMinutes < 60) return;
-    void runSyncQueue(QUICK_SYNC_QUEUE, 'all');
+    void runSyncQueue(QUICK_SYNC_QUEUE, 'all', 'auto');
   });
 });
 
