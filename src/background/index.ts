@@ -21,6 +21,7 @@ import {
 
 const AUTO_SYNC_ALARM_NAME = 'google_ai_hub_auto_sync';
 let isSyncLocked = false;
+let activeSyncTarget: SyncableBenefitId | undefined;
 
 /** 根据用户设置维护低频定时同步闹钟（最低 60 分钟，防止高频轮询） */
 async function syncAutoAlarmSchedule(intervalMinutes: number): Promise<void> {
@@ -134,7 +135,7 @@ const SYNC_URL_PATTERNS: Record<SyncableBenefitId, string[]> = {
   colab: ['https://colab.research.google.com/*'],
   gemini: ['https://gemini.google.com/*'],
   notebooklm: ['https://notebook.google.com/*', 'https://notebooklm.google.com/*'],
-  antigravity: ['https://antigravity.google.com/*'],
+  antigravity: ['https://antigravity.google.com/remote*'],
 };
 
 async function tryExtractFromExistingTab(
@@ -181,13 +182,15 @@ async function tryExtractFromExistingTab(
   }
 }
 
-/** 使用同一个可复用的后台标签页完成单个站点同步，避免反复打开关闭多个标签 */
+/** 在临时标签页读取额度。其他站点可以复用同一个后台标签页。 */
 async function syncSiteInReusableTab(
   benefitId: SyncableBenefitId,
-  sharedTabId: number | undefined,
-  allowPopupFallback = true
+  sharedTabId: number | undefined
 ): Promise<{ result: ParsedSiteResult; tabId: number | undefined }> {
-  const url = buildAccountUrl(benefitId);
+  const accountUrl = buildAccountUrl(benefitId);
+  const url = benefitId === 'antigravity'
+    ? `${accountUrl}#google-ai-hub-background-sync`
+    : accountUrl;
   let tabId = sharedTabId;
 
   try {
@@ -220,54 +223,6 @@ async function syncSiteInReusableTab(
     await sleep(800);
     let result = await requestExtractionFromTab(tabId, benefitId);
 
-    // Antigravity 在非激活标签页中因 visibilityState=hidden 可能暂停 React 挂载；
-    // 仅在用户主动触发同步时，遇到 fallback_app_not_mounted 改用不抢焦点的角落极小独立窗完成提取，避免定时后台同步打扰用户。
-    if (
-      allowPopupFallback &&
-      benefitId === 'antigravity' &&
-      result.status === 'fallback' &&
-      result.debugInfo?.reason === 'fallback_app_not_mounted'
-    ) {
-      let tempWinId: number | undefined;
-      let originWinId: number | undefined;
-      try {
-        const originWin = await chrome.windows.getLastFocused().catch(() => undefined);
-        originWinId = originWin?.id;
-
-        const win = await chrome.windows.create({
-          url,
-          type: 'popup',
-          focused: false,
-          width: 320,
-          height: 240,
-          left: 9999,
-          top: 9999,
-        });
-        tempWinId = win?.id;
-
-        // macOS 下新建窗口可能短暂抢焦点，立刻把焦点切回用户原窗口
-        if (originWinId !== undefined) {
-          chrome.windows.update(originWinId, { focused: true }).catch(() => {});
-        }
-
-        const winTabId = win?.tabs?.[0]?.id;
-        if (winTabId !== undefined) {
-          await waitForTabComplete(winTabId, Math.floor(SINGLE_TAB_TIMEOUT_MS * 0.75));
-          await sleep(1000);
-          result = await requestExtractionFromTab(winTabId, benefitId);
-        }
-      } catch {
-        // 保持原 fallback 结果
-      } finally {
-        if (tempWinId !== undefined) {
-          chrome.windows.remove(tempWinId).catch(() => {});
-        }
-        if (originWinId !== undefined) {
-          chrome.windows.update(originWinId, { focused: true }).catch(() => {});
-        }
-      }
-    }
-
     // 如果解析器返回了二级精准数据页（例如 Cloud /billing -> /billing/<ID>/credits/all），自动在同标签页跟进一次
     if (result.redirectUrl) {
       await chrome.tabs.update(tabId, { url: result.redirectUrl, active: false });
@@ -284,6 +239,7 @@ async function syncSiteInReusableTab(
         benefitId,
         status: 'fallback',
         metrics: {},
+        debugInfo: { host: new URL(url).hostname, reason: 'fallback_tab_sync_interrupted' },
         message: '后台同步中断，可点击直达官网查看',
       },
     };
@@ -316,6 +272,7 @@ async function runSyncQueue(
     for (let i = 0; i < targets.length; i++) {
       const targetId = targets[i];
       const meta = BENEFIT_CATALOG[targetId];
+      activeSyncTarget = targetId;
 
       await updateSyncProgress({
         running: true,
@@ -326,20 +283,17 @@ async function runSyncQueue(
         currentLabel: `正在同步 ${i + 1}/${targets.length}：${meta.title}`,
       });
 
-      // 1. 优先复用已打开的同平台标签页
-      const existingResult = await tryExtractFromExistingTab(targetId);
+      // Antigravity 只在扩展自己的临时标签页打开用量弹层。
+      const existingResult =
+        targetId === 'antigravity' ? null : await tryExtractFromExistingTab(targetId);
       if (existingResult) {
         await applyParsedSiteResult(existingResult);
       } else {
-        // 2. 否则复用唯一一个后台标签页顺序跳转，避免标签栏反复开合
-        const { result, tabId } = await syncSiteInReusableTab(
-          targetId,
-          reusableTabId,
-          trigger === 'manual'
-        );
+        const { result, tabId } = await syncSiteInReusableTab(targetId, reusableTabId);
         reusableTabId = tabId;
         await applyParsedSiteResult(result);
       }
+      activeSyncTarget = undefined;
 
       if (i < targets.length - 1) {
         await sleep(400);
@@ -378,6 +332,7 @@ async function runSyncQueue(
       });
     }
     isSyncLocked = false;
+    activeSyncTarget = undefined;
   }
 }
 
@@ -388,6 +343,10 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (message.type === 'PASSIVE_PARSE_RESULT') {
+      if (message.payload.benefitId === 'antigravity' && activeSyncTarget === 'antigravity') {
+        sendResponse({ ok: true });
+        return undefined;
+      }
       applyParsedSiteResult(message.payload)
         .then(() => sendResponse({ ok: true }))
         .catch(() => sendResponse({ ok: false }));
@@ -413,7 +372,7 @@ chrome.runtime.onMessage.addListener(
             return;
           }
 
-          void runSyncQueue(QUICK_SYNC_QUEUE, 'all');
+          void runSyncQueue(QUICK_SYNC_QUEUE, 'all', message.automatic ? 'auto' : 'manual');
           sendResponse({ ok: true });
         })
         .catch(() => sendResponse({ ok: false, error: '读取本地状态失败' }));

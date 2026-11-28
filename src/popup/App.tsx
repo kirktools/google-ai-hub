@@ -65,7 +65,7 @@ export function App() {
       ) {
         hasAutoSyncedRef.current = true;
         void chrome.runtime
-          .sendMessage({ type: 'SYNC_ALL' } satisfies RuntimeMessage)
+          .sendMessage({ type: 'SYNC_ALL', automatic: true } satisfies RuntimeMessage)
           .catch(() => {
             // 静默忽略后台尚未唤醒时的偶发错误
           });

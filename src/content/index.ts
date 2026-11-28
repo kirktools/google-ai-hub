@@ -108,6 +108,7 @@ chrome.runtime.onMessage.addListener(
             benefitId: message.benefitId,
             status: 'fallback',
             metrics: {},
+            debugInfo: buildSanitizedDebugInfo(window.location.href, 'fallback_parse_failed'),
             message: '页面解析超时，已降级为默认展示',
           },
         });
@@ -136,7 +137,10 @@ function schedulePassiveSync(): void {
         if (result.status === 'synced' || result.status === 'unauthenticated') {
           chrome.runtime.sendMessage({
             type: 'PASSIVE_PARSE_RESULT',
-            payload: result,
+            payload: {
+              ...result,
+              debugInfo: result.debugInfo ?? buildSanitizedDebugInfo(window.location.href, result.status),
+            },
           } satisfies RuntimeMessage).catch(() => {
             // 忽略 Service Worker 休眠瞬间的通道错误
           });

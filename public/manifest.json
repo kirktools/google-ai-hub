@@ -44,6 +44,12 @@
   ],
   "content_scripts": [
     {
+      "matches": ["https://antigravity.google.com/remote*"],
+      "js": ["antigravity-background.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
       "matches": [
         "https://one.google.com/*",
         "https://aistudio.google.com/*",

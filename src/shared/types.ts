@@ -159,7 +159,7 @@ export interface ParsedSiteResult {
 
 /** Extension 内部消息协议 */
 export type RuntimeMessage =
-  | { type: 'SYNC_ALL'; force?: boolean }
+  | { type: 'SYNC_ALL'; force?: boolean; automatic?: boolean }
   | { type: 'SYNC_SINGLE'; benefitId: SyncableBenefitId }
   | { type: 'PASSIVE_PARSE_RESULT'; payload: ParsedSiteResult }
   | { type: 'EXTRACT_PAGE_DATA'; benefitId: SyncableBenefitId };
