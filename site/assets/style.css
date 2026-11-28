@@ -13,6 +13,9 @@
   --amber-soft: #fffbeb;
   --amber-border: #fde68a;
   --amber-text: #92400e;
+  --code-bg: #f1f5f9;
+  --code-text: #1e293b;
+  --code-border: #e2e8f0;
   --radius: 16px;
 }
 
@@ -32,6 +35,9 @@
     --amber-soft: rgba(245, 158, 11, 0.14);
     --amber-border: rgba(245, 158, 11, 0.35);
     --amber-text: #fcd34d;
+    --code-bg: #020617;
+    --code-text: #e2e8f0;
+    --code-border: #1e293b;
   }
 }
 
@@ -225,8 +231,9 @@ h1 {
   margin: 0;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #0f172a;
-  color: #e2e8f0;
+  border: 1px solid var(--code-border);
+  background: var(--code-bg);
+  color: var(--code-text);
   font-size: 12.5px;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -429,8 +436,9 @@ h1 {
   margin: 14px 0 0;
   padding: 14px 16px;
   border-radius: 12px;
-  background: #0f172a;
-  color: #e2e8f0;
+  border: 1px solid var(--code-border);
+  background: var(--code-bg);
+  color: var(--code-text);
   font-size: 13px;
   overflow-x: auto;
 }
