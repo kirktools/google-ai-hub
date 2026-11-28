@@ -14,6 +14,10 @@ interface ModelQuotaGroup {
   weeklyRefresh?: string;
 }
 
+const QUOTA_LABEL = /Weekly\s+Limit\s+Remaining|每周剩余限额|Five\s+Hour\s+Limit\s+Remaining|5\s*小时剩余限额/gi;
+const QUOTA_REFRESH_BUTTON = 'button[aria-label="Refresh quota and credits data"]';
+const QUOTA_CIRCLE = '[data-testid="quota-progress-circle"]';
+
 /** 将英文时长（如 "3 hours, 27 minutes" / "5 days, 11 hours"）本地化为简洁中文 */
 function localizeDurationToZh(raw: string): string {
   return raw
@@ -28,29 +32,24 @@ function localizeDurationToZh(raw: string): string {
 
 function parseQuotaGroup(sectionText: string): ModelQuotaGroup {
   const result: ModelQuotaGroup = {};
-
-  const weeklyBlock = sectionText.match(
-    /(?:Weekly\s+Limit\s+Remaining|每周剩余限额)[\s\S]{0,180}/i
-  )?.[0];
-  if (weeklyBlock) {
-    const pct = weeklyBlock.match(/(\d{1,3})\s*%/);
-    if (pct) result.weeklyRemaining = Math.min(100, Math.max(0, Number(pct[1])));
-    const ref = weeklyBlock.match(
+  const labels = [...sectionText.matchAll(QUOTA_LABEL)];
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i];
+    const start = label.index + label[0].length;
+    const end = Math.min(start + 180, labels[i + 1]?.index ?? sectionText.length);
+    const block = sectionText.slice(start, end);
+    const pct = block.match(/(\d{1,3})\s*%/);
+    const remaining = pct ? Math.min(100, Number(pct[1])) : undefined;
+    const refresh = block.match(
       /(?:refresh\s+in|刷新时间|重置于)\s*[:：]?\s*([^\n.]{3,32})/i
-    );
-    if (ref) result.weeklyRefresh = ref[1].trim();
-  }
-
-  const fiveHourBlock = sectionText.match(
-    /(?:Five\s+Hour\s+Limit\s+Remaining|5\s*小时剩余限额)[\s\S]{0,180}/i
-  )?.[0];
-  if (fiveHourBlock) {
-    const pct = fiveHourBlock.match(/(\d{1,3})\s*%/);
-    if (pct) result.fiveHourRemaining = Math.min(100, Math.max(0, Number(pct[1])));
-    const ref = fiveHourBlock.match(
-      /(?:refresh\s+in|刷新时间|重置于)\s*[:：]?\s*([^\n.]{3,32})/i
-    );
-    if (ref) result.fiveHourRefresh = ref[1].trim();
+    )?.[1].trim();
+    if (/^(?:Weekly|每周)/i.test(label[0])) {
+      result.weeklyRemaining ??= remaining;
+      result.weeklyRefresh ??= refresh;
+    } else {
+      result.fiveHourRemaining ??= remaining;
+      result.fiveHourRefresh ??= refresh;
+    }
   }
 
   return result;
@@ -69,26 +68,20 @@ function detectPlanFromAntigravity(text: string): { planId: PlanId; rawName: str
 }
 
 function getAntigravityText(doc: Document): string {
-  const visible = getVisibleText(doc);
-  if (/Weekly\s+Limit\s+Remaining|Five\s+Hour\s+Limit\s+Remaining/i.test(visible)) {
-    return visible;
-  }
-  // 后台未绘制标签页中 innerText 有时缺失未布局节点，回退读取 dialog 的 textContent
   const dialogs = Array.from(doc.querySelectorAll<HTMLElement>('[role="dialog"]'));
   for (const dlg of dialogs) {
-    const tc = (dlg.textContent || '').replace(/\s+/g, ' ').trim();
-    if (/Weekly\s+Limit\s+Remaining|Five\s+Hour\s+Limit\s+Remaining/i.test(tc)) {
-      return tc;
-    }
+    const raw = (dlg.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!/Models\s*&\s*Usage/i.test(raw)) continue;
+    const visible = dlg.innerText || '';
+    // 后台页面可能只在 innerText 中暴露标题，已经挂载的数字仍可从同一面板读取。
+    return hasQuotaValues(visible) ? visible : raw;
   }
-  return visible;
+  return getVisibleText(doc);
 }
 
-function hasRenderedQuotaCircles(doc: Document): boolean {
-  const text = getAntigravityText(doc);
-  return /(?:Weekly\s+Limit\s+Remaining|Five\s+Hour\s+Limit\s+Remaining)[\s\S]{0,180}\d{1,3}\s*%/i.test(
-    text
-  );
+function hasQuotaValues(text: string): boolean {
+  const quota = parseQuotaGroup(text);
+  return quota.weeklyRemaining !== undefined || quota.fiveHourRemaining !== undefined;
 }
 
 export const antigravityParser: SiteParser = {
@@ -100,7 +93,7 @@ export const antigravityParser: SiteParser = {
       doc.querySelector('[role="dialog"]') ||
       doc.querySelector('button[data-testid="settings-button"]') ||
       doc.querySelector('button[aria-label="Toggle Sidebar"]') ||
-      doc.querySelector('[data-testid="quota-progress-circle"]')
+      doc.querySelector(QUOTA_CIRCLE)
     ) {
       return true;
     }
@@ -110,19 +103,10 @@ export const antigravityParser: SiteParser = {
     );
   },
 
-  /** 主动后台同步时，确保 Models & Usage 弹层打开，并轮询等待 GetUserQuotaSummary RPC 渲染完百分比 */
+  /** 等待用量面板加载。首次加载为空时，通过页面自身的按钮重试一次。 */
   async prepareForActiveSync(doc) {
-    // 如果复用的是已打开的 Antigravity 标签且额度面板已展开，先点一下「刷新额度」拿最新数据
-    if (hasRenderedQuotaCircles(doc)) {
-      const refreshBtn = doc.querySelector<HTMLElement>(
-        'button[aria-label="Refresh quota and credits data"]'
-      );
-      if (refreshBtn) {
-        refreshBtn.click();
-        await sleepMs(1600);
-      }
-      return;
-    }
+    // 主动同步使用新打开的页面，已读出的额度来自本次导航。
+    if (hasQuotaValues(getAntigravityText(doc))) return;
 
     // 1. 如果页面还没出现 Models & Usage 或设置导航项，先确保侧边栏展开并点击 settings-button
     const textNow = getVisibleText(doc);
@@ -169,17 +153,16 @@ export const antigravityParser: SiteParser = {
       }
     }
 
-    // 3. 轮询等待百分比数字渲染完成；若 3 秒后仍未出数，主动点一次面板内的刷新额度按钮触发 RPC
+    // 页面初次取数时会禁用刷新按钮，等它重新可用再点击，避免把无效点击算成重试。
+    let refreshed = false;
     for (let i = 0; i < 16; i++) {
-      if (hasRenderedQuotaCircles(doc)) {
-        await sleepMs(250);
-        break;
-      }
-      if (i === 6) {
-        const refreshQuotaBtn = doc.querySelector<HTMLElement>(
-          'button[aria-label="Refresh quota and credits data"]'
-        );
-        refreshQuotaBtn?.click();
+      if (hasQuotaValues(getAntigravityText(doc))) return;
+      if (!refreshed && i >= 6) {
+        const button = doc.querySelector<HTMLButtonElement>(QUOTA_REFRESH_BUTTON);
+        if (button && !button.disabled && button.getAttribute('aria-disabled') !== 'true') {
+          button.click();
+          refreshed = true;
+        }
       }
       await sleepMs(500);
     }
@@ -221,8 +204,13 @@ export const antigravityParser: SiteParser = {
       const hasSettingsBtn = Boolean(
         doc.querySelector('button[data-testid="settings-button"], button[aria-label="Toggle Sidebar"]')
       );
+      const refreshButton = doc.querySelector<HTMLButtonElement>(QUOTA_REFRESH_BUTTON);
       const safeReason = hasModelsHeading
-        ? 'fallback_quota_rpc_empty'
+        ? doc.querySelector(QUOTA_CIRCLE)
+          ? 'fallback_quota_unreadable'
+          : refreshButton?.disabled || refreshButton?.getAttribute('aria-disabled') === 'true'
+            ? 'fallback_quota_loading'
+            : 'fallback_quota_rpc_empty'
         : hasDialog
           ? 'fallback_dialog_wrong_tab'
           : hasSettingsBtn

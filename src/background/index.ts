@@ -223,6 +223,20 @@ async function syncSiteInReusableTab(
     await sleep(800);
     let result = await requestExtractionFromTab(tabId, benefitId);
 
+    // 临时后台页偶尔会停在空面板，重新加载同一标签页一次。
+    const reason = result.debugInfo?.reason;
+    if (
+      benefitId === 'antigravity' &&
+      result.status === 'fallback' &&
+      (reason === 'fallback_quota_rpc_empty' ||
+        reason === 'fallback_quota_loading' ||
+        reason === 'fallback_app_not_mounted')
+    ) {
+      await chrome.tabs.reload(tabId);
+      await waitForTabComplete(tabId, Math.floor(SINGLE_TAB_TIMEOUT_MS * 0.65));
+      result = await requestExtractionFromTab(tabId, benefitId);
+    }
+
     // 如果解析器返回了二级精准数据页（例如 Cloud /billing -> /billing/<ID>/credits/all），自动在同标签页跟进一次
     if (result.redirectUrl) {
       await chrome.tabs.update(tabId, { url: result.redirectUrl, active: false });
